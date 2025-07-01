@@ -87,6 +87,8 @@ void EmuWindow_LibRetro::SwapBuffers() {
     case Settings::GraphicsAPI::Vulkan:
     {
 #ifdef ENABLE_VULKAN
+        LibRetro::UploadVideoFrame(RETRO_HW_FRAME_BUFFER_VALID, static_cast<unsigned>(width),
+                                   static_cast<unsigned>(height), 0);
 #endif
         break;
     }

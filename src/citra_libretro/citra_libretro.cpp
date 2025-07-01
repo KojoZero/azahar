@@ -21,6 +21,9 @@
 #ifdef ENABLE_OPENGL
 #include "video_core/renderer_opengl/renderer_opengl.h"
 #endif
+#ifdef ENABLE_VULKAN
+#include "citra_libretro/libretro_vk.h"
+#endif
 #include "video_core/renderer_software/renderer_software.h"
 #include "video_core/video_core.h"
 
@@ -625,6 +628,11 @@ static void context_reset() {
         }
         break;
 #endif
+#ifdef ENABLE_VULKAN
+    case Settings::GraphicsAPI::Vulkan:
+        LibRetro::VulkanResetContext();
+        break;
+#endif
     default:
         // software renderer never gets here
         break;
@@ -693,6 +701,19 @@ bool retro_load_game(const struct retro_game_info* info) {
 #endif
         break;
     case Settings::GraphicsAPI::Vulkan:
+#ifdef ENABLE_VULKAN
+        LOG_INFO(Frontend, "Using Vulkan hw renderer");
+        emu_instance->hw_render.context_type = RETRO_HW_CONTEXT_VULKAN;
+        emu_instance->hw_render.version_major = VK_MAKE_VERSION(1, 1, 0);
+        emu_instance->hw_render.version_minor = 0;
+        emu_instance->hw_render.context_reset = context_reset;
+        emu_instance->hw_render.context_destroy = context_destroy;
+        emu_instance->hw_render.cache_context = true;
+        if (!LibRetro::SetHWRenderer(&emu_instance->hw_render)) {
+            LibRetro::DisplayMessage("Failed to set HW renderer");
+            return false;
+        }
+#endif
         break;
     case Settings::GraphicsAPI::Software:
         emu_instance->game_loaded = do_load_game();

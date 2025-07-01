@@ -12,9 +12,6 @@
 #include "common/settings.h"
 #include "core/core.h"
 #include "libretro.h"
-#ifdef ENABLE_VULKAN
-#include "libretro_vulkan.h"
-#endif
 
 namespace LibRetro {
 
@@ -52,8 +49,6 @@ retro_log_printf_t GetLoggingBackend();
 /// Returns graphics api based on global frontend setting
 Settings::GraphicsAPI GetPreferredRenderer();
 
-const struct retro_hw_render_interface_vulkan* GetHWRenderInterfaceVulkan();
-
 /// Displays information about the kinds of controllers that this Citra recreates.
 bool SetControllerInfo(const retro_controller_info info[]);
 
@@ -63,9 +58,11 @@ bool SetPixelFormat(const retro_pixel_format fmt);
 /// Sets the H/W rendering context.
 bool SetHWRenderer(retro_hw_render_callback* cb);
 
-#ifdef ENABLE_VULKAN
-bool SetVkDeviceCallbacks(const retro_vulkan_create_device_t vk_create_device, const retro_vulkan_destroy_device_t vk_destroy_device);
-#endif
+/// Gets the H/W rendering interface.
+bool GetHWRenderInterface(void **interface);
+
+/// Sets the H/W rendering context negotiation interface.
+bool SetHWRenderContextNegotiationInterface(void **interface);
 
 /// Sets the async audio callback.
 bool SetAudioCallback(retro_audio_callback* cb);

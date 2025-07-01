@@ -10,6 +10,7 @@ add_library(azahar_libretro SHARED
         input/mouse_tracker.h
         citra_libretro.cpp
         citra_libretro.h
+        $<$<BOOL:${ENABLE_VULKAN}>: libretro_vk.cpp libretro_vk.h>
         environment.cpp
         environment.h
         core_settings.cpp
@@ -31,7 +32,7 @@ target_compile_definitions(input_common PRIVATE HAVE_LIBRETRO)
 target_link_libraries(azahar_libretro PRIVATE citra_common citra_core)
 target_link_libraries(azahar_libretro PRIVATE boost dds-ktx libretro robin_map)
 if(ENABLE_VULKAN)
-  target_link_libraries(azahar_libretro PRIVATE sirit vulkan-headers)
+  target_link_libraries(azahar_libretro PRIVATE sirit vulkan-headers vma)
 endif()
 if(ENABLE_OPENGL)
   target_link_libraries(azahar_libretro PRIVATE glad)
@@ -60,4 +61,16 @@ endif()
 
 if(MINGW)
   target_link_libraries(azahar_libretro PRIVATE crypt32)
+endif()
+
+if(IOS)
+  target_link_libraries(azahar_libretro PRIVATE "-framework CoreFoundation" "-framework Foundation")
+endif()
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR
+    CMAKE_SYSTEM_NAME STREQUAL "iOS" OR
+    CMAKE_SYSTEM_NAME STREQUAL "tvOS")
+  target_link_libraries(azahar_libretro PRIVATE "-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libretro.osx.def")
+else()
+  target_link_libraries(azahar_libretro PRIVATE "-Wl,-Bsymbolic")
 endif()
