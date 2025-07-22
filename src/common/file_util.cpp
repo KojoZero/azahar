@@ -60,6 +60,7 @@ typedef struct stat file_stat_t;
 #include <dirent.h>
 #include <pwd.h>
 #include <unistd.h>
+typedef struct stat file_stat_t;
 #endif
 
 #if defined(__APPLE__)
