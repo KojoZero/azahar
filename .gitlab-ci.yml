@@ -96,6 +96,7 @@ libretro-build-osx-x64:
     - mac-apple-silicon
   variables:
     CORE_ARGS: ${BASE_CORE_ARGS} -DCMAKE_OSX_ARCHITECTURES=x86_64
+    MACOSX_DEPLOYMENT_TARGET: "10.15"
   extends:
     - .core-defs
     - .libretro-osx-cmake-x86_64
@@ -128,6 +129,7 @@ libretro-build-ios-arm64:
     - .core-defs
   variables:
     CORE_ARGS: ${BASE_CORE_ARGS} -DCITRA_USE_PRECOMPILED_HEADERS=OFF -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES=arm64 -DENABLE_OPT=OFF
+    IOS_MINVER: "13.0"
 
 # tvOS arm64
 libretro-build-tvos-arm64:
@@ -136,6 +138,7 @@ libretro-build-tvos-arm64:
     - .core-defs
   variables:
     CORE_ARGS: ${BASE_CORE_ARGS} -DCITRA_USE_PRECOMPILED_HEADERS=OFF -DIOS=ON -DCMAKE_SYSTEM_NAME=tvOS -DCMAKE_OSX_SYSROOT=appletvos -DCMAKE_OSX_ARCHITECTURES=arm64 -DENABLE_OPT=OFF
+    MINVER: "13.0"
 
 ################################### CONSOLES #################################
 
