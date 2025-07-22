@@ -11,9 +11,9 @@
 #include "common/common_types.h"
 #include "common/dynamic_library/dynamic_library.h"
 #include "video_core/renderer_vulkan/vk_common.h"
-#include "video_core/renderer_vulkan/vk_platform.h"
 #include "video_core/renderer_vulkan/vk_instance.h"
 #include "video_core/renderer_vulkan/vk_master_semaphore.h"
+#include "video_core/renderer_vulkan/vk_platform.h"
 
 #include "libretro_vulkan.h"
 
@@ -27,8 +27,7 @@ extern void VulkanResetContext();
 
 namespace Vulkan {
 
-class LibRetroVKInstance : public Instance
-{
+class LibRetroVKInstance : public Instance {
 public:
     explicit LibRetroVKInstance(Frontend::EmuWindow& window, u32 physical_device_index);
 
@@ -37,7 +36,6 @@ public:
 
     /// Returns the Vulkan device
     vk::Device GetDevice() const override;
-
 
 private:
     /// Initializes vendor-specific information
@@ -153,4 +151,4 @@ private:
     vk::Queue graphics_queue{};
 };
 
-}
+} // namespace Vulkan

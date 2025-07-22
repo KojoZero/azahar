@@ -264,8 +264,7 @@ public:
         initialization_in_progress_suppress_logging = true;
         Filter filter;
         filter.ParseFilterString(Settings::values.log_filter.GetValue());
-        instance = std::unique_ptr<Impl, decltype(&Deleter)>(
-            new Impl(callback, filter), Deleter);
+        instance = std::unique_ptr<Impl, decltype(&Deleter)>(new Impl(callback, filter), Deleter);
         initialization_in_progress_suppress_logging = false;
     }
 #endif

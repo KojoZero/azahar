@@ -30,7 +30,8 @@ constexpr std::array sink_details = {
     SinkDetails{SinkType::LibRetro, "libretro",
                 [](std::string_view device_id) -> std::unique_ptr<Sink> {
                     return std::make_unique<LibRetroSink>(std::string(device_id));
-                }, &ListLibretroSinkDevices},
+                },
+                &ListLibretroSinkDevices},
 #endif
 #ifdef HAVE_CUBEB
     SinkDetails{SinkType::Cubeb, "Cubeb",

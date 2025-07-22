@@ -20,14 +20,14 @@ namespace LibRetro {
 namespace {
 
 static retro_video_refresh_t video_cb;
-//static retro_audio_sample_t audio_cb;
+// static retro_audio_sample_t audio_cb;
 static retro_environment_t environ_cb;
 static retro_input_poll_t input_poll_cb;
 static retro_input_state_t input_state_cb;
 
 } // namespace
 
-bool GetSoftwareFramebuffer(retro_framebuffer *fb, int width, int height) {
+bool GetSoftwareFramebuffer(retro_framebuffer* fb, int width, int height) {
     fb->data = nullptr;
     fb->width = width;
     fb->height = height;
@@ -54,8 +54,7 @@ Settings::GraphicsAPI GetPreferredRenderer() {
     // try and maintain the current driver
     retro_hw_context_type context_type = RETRO_HW_CONTEXT_OPENGL;
     environ_cb(RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER, &context_type);
-    switch (context_type)
-    {
+    switch (context_type) {
 #ifdef ENABLE_OPENGL
     case RETRO_HW_CONTEXT_OPENGL:
     case RETRO_HW_CONTEXT_OPENGL_CORE:
@@ -97,12 +96,13 @@ bool SetHWRenderer(retro_hw_render_callback* cb) {
     return environ_cb(RETRO_ENVIRONMENT_SET_HW_RENDER, cb);
 }
 
-bool GetHWRenderInterface(void **interface) {
+bool GetHWRenderInterface(void** interface) {
     return environ_cb(RETRO_ENVIRONMENT_GET_HW_RENDER_INTERFACE, interface) && !!*interface;
 }
 
-bool SetHWRenderContextNegotiationInterface(void **interface) {
-    return environ_cb(RETRO_ENVIRONMENT_SET_HW_RENDER_CONTEXT_NEGOTIATION_INTERFACE, interface) && !!*interface;
+bool SetHWRenderContextNegotiationInterface(void** interface) {
+    return environ_cb(RETRO_ENVIRONMENT_SET_HW_RENDER_CONTEXT_NEGOTIATION_INTERFACE, interface) &&
+           !!*interface;
 }
 
 bool SetAudioCallback(retro_audio_callback* cb) {
@@ -185,7 +185,7 @@ int16_t CheckInput(unsigned port, unsigned device, unsigned index, unsigned id) 
 #ifdef HAVE_LIBRETRO_VFS
 void SetVFSCallback(struct retro_vfs_interface_info* vfs_iface_info) {
     if (environ_cb(RETRO_ENVIRONMENT_GET_VFS_INTERFACE, vfs_iface_info))
-            filestream_vfs_init(vfs_iface_info);
+        filestream_vfs_init(vfs_iface_info);
 }
 #endif
 

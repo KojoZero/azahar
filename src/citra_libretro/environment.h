@@ -19,7 +19,7 @@ namespace LibRetro {
 /// @see RETRO_ENVIRONMENT_GET_CURRENT_SOFTWARE_FRAMEBUFFER
 /// @see retro_framebuffer
 /// @see retro_video_refresh_t
-bool GetSoftwareFramebuffer(retro_framebuffer *fb, int width, int height);
+bool GetSoftwareFramebuffer(retro_framebuffer* fb, int width, int height);
 
 /// Calls back to LibRetro to upload a particular video frame.
 /// @see retro_video_refresh_t
@@ -59,10 +59,10 @@ bool SetPixelFormat(const retro_pixel_format fmt);
 bool SetHWRenderer(retro_hw_render_callback* cb);
 
 /// Gets the H/W rendering interface.
-bool GetHWRenderInterface(void **interface);
+bool GetHWRenderInterface(void** interface);
 
 /// Sets the H/W rendering context negotiation interface.
-bool SetHWRenderContextNegotiationInterface(void **interface);
+bool SetHWRenderContextNegotiationInterface(void** interface);
 
 /// Sets the async audio callback.
 bool SetAudioCallback(retro_audio_callback* cb);

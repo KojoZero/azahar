@@ -270,7 +270,9 @@ bool System::LoadStateBuffer(std::vector<u8> buffer) {
     }
     std::string revision = fmt::format("{:02x}", fmt::join(header.revision, ""));
     if (revision != Common::g_scm_rev) {
-        LOG_ERROR(Core, "Save state file created from a different revision (core: {}, savestate: {})", Common::g_scm_rev, revision);
+        LOG_ERROR(Core,
+                  "Save state file created from a different revision (core: {}, savestate: {})",
+                  Common::g_scm_rev, revision);
         return false;
     }
 

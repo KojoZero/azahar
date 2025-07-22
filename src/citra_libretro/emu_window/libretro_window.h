@@ -6,8 +6,8 @@
 
 #include <memory>
 #include <utility>
-#include "core/frontend/emu_window.h"
 #include "citra_libretro/input/mouse_tracker.h"
+#include "core/frontend/emu_window.h"
 
 void ResetGLState();
 

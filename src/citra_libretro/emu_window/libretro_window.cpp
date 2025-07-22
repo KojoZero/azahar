@@ -19,7 +19,6 @@
 #include "video_core/gpu.h"
 #include "video_core/renderer_software/renderer_software.h"
 
-
 #ifdef ENABLE_OPENGL
 /// LibRetro expects a "default" GL state.
 void ResetGLState() {
@@ -69,8 +68,7 @@ void EmuWindow_LibRetro::SwapBuffers() {
     submittedFrame = true;
 
     switch (Settings::values.graphics_api.GetValue()) {
-    case Settings::GraphicsAPI::OpenGL:
-    {
+    case Settings::GraphicsAPI::OpenGL: {
 #ifdef ENABLE_OPENGL
         auto current_state = OpenGL::OpenGLState::GetCurState();
         ResetGLState();
@@ -78,24 +76,22 @@ void EmuWindow_LibRetro::SwapBuffers() {
             tracker->Render(width, height);
         }
         LibRetro::UploadVideoFrame(RETRO_HW_FRAME_BUFFER_VALID, static_cast<unsigned>(width),
-                               static_cast<unsigned>(height), 0);
+                                   static_cast<unsigned>(height), 0);
         ResetGLState();
         current_state.Apply();
 #endif
         break;
     }
-    case Settings::GraphicsAPI::Vulkan:
-    {
+    case Settings::GraphicsAPI::Vulkan: {
 #ifdef ENABLE_VULKAN
         LibRetro::UploadVideoFrame(RETRO_HW_FRAME_BUFFER_VALID, static_cast<unsigned>(width),
                                    static_cast<unsigned>(height), 0);
 #endif
         break;
     }
-    case Settings::GraphicsAPI::Software:
-    {
+    case Settings::GraphicsAPI::Software: {
         retro_framebuffer fb;
-        void *data;
+        void* data;
         bool did_malloc = false;
         if (LibRetro::GetSoftwareFramebuffer(&fb, width, height)) {
             data = fb.data;
@@ -112,10 +108,10 @@ void EmuWindow_LibRetro::SwapBuffers() {
         std::memcpy(data, tl_info.pixels.data(), tl_info.pixels.size());
         const auto& b_info = renderer.Screen(VideoCore::ScreenId::Bottom);
         // this is also not correct
-        std::memcpy(((uint8_t*)data) + tl_info.pixels.size(), b_info.pixels.data(), b_info.pixels.size());
-        LibRetro::UploadVideoFrame(data,
-                                static_cast<unsigned>(width),
-                                static_cast<unsigned>(height), 0);
+        std::memcpy(((uint8_t*)data) + tl_info.pixels.size(), b_info.pixels.data(),
+                    b_info.pixels.size());
+        LibRetro::UploadVideoFrame(data, static_cast<unsigned>(width),
+                                   static_cast<unsigned>(height), 0);
         if (did_malloc)
             free(data);
         break;
@@ -174,8 +170,7 @@ void EmuWindow_LibRetro::DoneCurrent() {
     // They don't get any say in the matter - GL context is always current!
 }
 
-void EmuWindow_LibRetro::OnMinimalClientAreaChangeRequest(std::pair<u32, u32> _minimal_size) {
-}
+void EmuWindow_LibRetro::OnMinimalClientAreaChangeRequest(std::pair<u32, u32> _minimal_size) {}
 
 void EmuWindow_LibRetro::UpdateLayout() {
     // TODO: Handle custom layouts
@@ -187,7 +182,8 @@ void EmuWindow_LibRetro::UpdateLayout() {
 
     bool swapped = Settings::values.swap_screen.GetValue();
 
-    enableEmulatedPointer = (Settings::values.graphics_api.GetValue() == Settings::GraphicsAPI::OpenGL);
+    enableEmulatedPointer =
+        (Settings::values.graphics_api.GetValue() == Settings::GraphicsAPI::OpenGL);
 
     switch (Settings::values.layout_option.GetValue()) {
     case Settings::LayoutOption::SingleScreen:
@@ -237,7 +233,7 @@ void EmuWindow_LibRetro::UpdateLayout() {
     }
 
     // Update Libretro with our status
-    struct retro_system_av_info info {};
+    struct retro_system_av_info info{};
     info.timing.fps = 60.0;
     info.timing.sample_rate = AudioCore::native_sample_rate;
     info.geometry.aspect_ratio = (float)baseX / (float)baseY;

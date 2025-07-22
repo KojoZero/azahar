@@ -5,11 +5,11 @@
 #include <list>
 #include <numeric>
 #include <vector>
+#include <common/file_util.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <common/file_util.h>
 
 #ifdef ENABLE_OPENGL
 #include "glad/glad.h"
@@ -37,11 +37,11 @@
 #include "common/settings.h"
 #include "common/string_util.h"
 #include "core/core.h"
-#include "core/memory.h"
-#include "core/hle/kernel/memory.h"
-#include "core/loader/loader.h"
 #include "core/frontend/applets/default_applets.h"
 #include "core/frontend/image_interface.h"
+#include "core/hle/kernel/memory.h"
+#include "core/loader/loader.h"
+#include "core/memory.h"
 
 #ifdef HAVE_LIBRETRO_VFS
 #include <streams/file_stream_transforms.h>
@@ -54,7 +54,7 @@ public:
     Common::Log::Filter log_filter;
     std::unique_ptr<EmuWindow_LibRetro> emu_window;
     bool game_loaded = false;
-    struct retro_hw_render_callback hw_render {};
+    struct retro_hw_render_callback hw_render{};
 };
 
 CitraLibRetro* emu_instance;
@@ -75,7 +75,8 @@ void retro_init() {
     Frontend::RegisterDefaultApplets(Core::System::GetInstance());
 
     // Register generic image interface
-    Core::System::GetInstance().RegisterImageInterface(std::make_shared<Frontend::ImageInterface>());
+    Core::System::GetInstance().RegisterImageInterface(
+        std::make_shared<Frontend::ImageInterface>());
 
     LibRetro::Input::Init();
 }
@@ -100,7 +101,7 @@ unsigned retro_api_version() {
 void LibRetro::OnConfigureEnvironment() {
 
 #ifdef HAVE_LIBRETRO_VFS
-    struct retro_vfs_interface_info vfs_iface_info { 1, nullptr };
+    struct retro_vfs_interface_info vfs_iface_info{1, nullptr};
     LibRetro::SetVFSCallback(&vfs_iface_info);
 #endif
 
@@ -112,31 +113,36 @@ void LibRetro::OnConfigureEnvironment() {
     cpuScale.append(std::to_string(DEFAULT_CPU_SCALE) + "% (Default)|");
 
     for (int i = MIN_CPU_SCALE; i <= MAX_CPU_SCALE; i += 5) {
-        if (i == DEFAULT_CPU_SCALE) continue;
+        if (i == DEFAULT_CPU_SCALE)
+            continue;
 
         cpuScale.append(std::to_string(i) + "%");
 
         if (i != MAX_CPU_SCALE)
-         cpuScale.append("|");
+            cpuScale.append("|");
     }
 
     retro_variable values[] = {
         {"citra_graphics_api", "Graphics API; Auto"
 #ifdef ENABLE_VULKAN
-         "|Vulkan"
+                               "|Vulkan"
 #endif
 #ifdef ENABLE_OPENGL
-         "|OpenGL"
+                               "|OpenGL"
 #endif
-         "|Software"},
+                               "|Software"},
         {"citra_use_cpu_jit", "Enable CPU JIT; enabled|disabled"},
         {"citra_cpu_scale", cpuScale.c_str()},
         {"citra_use_shader_jit", "Enable shader JIT; enabled|disabled"},
         {"citra_use_hw_shaders", "Enable hardware shaders; enabled|disabled"},
         {"citra_use_hw_shader_cache", "Save hardware shader cache to disk; enabled|disabled"},
-        {"citra_use_acc_geo_shaders", "Enable accurate geometry shaders (only for H/W shaders); enabled|disabled"},
-        {"citra_use_acc_mul", "Enable accurate shaders multiplication (only for H/W shaders); enabled|disabled"},
-        {"citra_texture_filter", "Texture filter type; none|Anime4K Ultrafast|Bicubic|NearestNeighbor|ScaleForce|xBRZ freescale|MMPX"},
+        {"citra_use_acc_geo_shaders",
+         "Enable accurate geometry shaders (only for H/W shaders); enabled|disabled"},
+        {"citra_use_acc_mul",
+         "Enable accurate shaders multiplication (only for H/W shaders); enabled|disabled"},
+        {"citra_texture_filter",
+         "Texture filter type; none|Anime4K Ultrafast|Bicubic|NearestNeighbor|ScaleForce|xBRZ "
+         "freescale|MMPX"},
         {"citra_texture_sampling", "Texture sampling type; GameControlled|NearestNeighbor|Linear"},
         {"citra_custom_textures", "Enable custom textures; disabled|enabled"},
         {"citra_dump_textures", "Dump textures; disabled|enabled"},
@@ -149,16 +155,19 @@ void LibRetro::OnConfigureEnvironment() {
         {"citra_analog_function",
          "Right analog function; C-Stick and Touchscreen Pointer|Touchscreen Pointer|C-Stick"},
         {"citra_deadzone", "Emulated pointer deadzone (%); 15|20|25|30|35|0|5|10"},
-        {"citra_mouse_touchscreen", "Simulate touchscreen interactions with mouse; enabled|disabled"},
-        {"citra_touch_touchscreen", "Simulate touchscreen interactions with touchscreen; disabled|enabled"},
+        {"citra_mouse_touchscreen",
+         "Simulate touchscreen interactions with mouse; enabled|disabled"},
+        {"citra_touch_touchscreen",
+         "Simulate touchscreen interactions with touchscreen; disabled|enabled"},
         {"citra_render_touchscreen", "Render simulated touchscreen interactions; disabled|enabled"},
         {"citra_use_virtual_sd", "Enable virtual SD card; enabled|disabled"},
         {"citra_use_libretro_save_path", "Savegame location; LibRetro Default|Azahar Default"},
         {"citra_is_new_3ds", "3DS system model; Old 3DS|New 3DS"},
         {"citra_region_value",
          "3DS system region; Auto|Japan|USA|Europe|Australia|China|Korea|Taiwan"},
-        {"citra_language", "3DS system language; English|Japanese|French|Spanish|German|Italian|Dutch|Portuguese|"
-                           "Russian|Korean|Traditional Chinese|Simplified Chinese"},
+        {"citra_language",
+         "3DS system language; English|Japanese|French|Spanish|German|Italian|Dutch|Portuguese|"
+         "Russian|Korean|Traditional Chinese|Simplified Chinese"},
         {"citra_use_gdbstub", "Enable GDB stub; disabled|enabled"},
         {nullptr, nullptr}};
 
@@ -181,18 +190,25 @@ uintptr_t LibRetro::GetFramebuffer() {
 }
 
 Settings::TextureFilter GetTextureFilter(std::string name) {
-    if (name == "Anime4K Ultrafast") return Settings::TextureFilter::Anime4K;
-    if (name == "Bicubic") return Settings::TextureFilter::Bicubic;
-    if (name == "ScaleForce") return Settings::TextureFilter::ScaleForce;
-    if (name == "xBRZ freescale") return Settings::TextureFilter::xBRZ;
-    if (name == "MMPX") return Settings::TextureFilter::MMPX;
+    if (name == "Anime4K Ultrafast")
+        return Settings::TextureFilter::Anime4K;
+    if (name == "Bicubic")
+        return Settings::TextureFilter::Bicubic;
+    if (name == "ScaleForce")
+        return Settings::TextureFilter::ScaleForce;
+    if (name == "xBRZ freescale")
+        return Settings::TextureFilter::xBRZ;
+    if (name == "MMPX")
+        return Settings::TextureFilter::MMPX;
 
     return Settings::TextureFilter::NoFilter;
 }
 
 Settings::TextureSampling GetTextureSampling(std::string name) {
-    if (name == "NearestNeighbor") return Settings::TextureSampling::NearestNeighbor;
-    if (name == "Linear") return Settings::TextureSampling::Linear;
+    if (name == "NearestNeighbor")
+        return Settings::TextureSampling::NearestNeighbor;
+    if (name == "Linear")
+        return Settings::TextureSampling::Linear;
 
     return Settings::TextureSampling::GameControlled;
 }
@@ -218,10 +234,14 @@ void UpdateSettings() {
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "Home/Swap screens"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3, "Touch Screen Touch"},
-        {0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Circle Pad X"},
-        {0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Circle Pad Y"},
-        {0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X, "C-Stick / Pointer X"},
-        {0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y, "C-Stick / Pointer Y"},
+        {0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X,
+         "Circle Pad X"},
+        {0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y,
+         "Circle Pad Y"},
+        {0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X,
+         "C-Stick / Pointer X"},
+        {0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y,
+         "C-Stick / Pointer Y"},
         {0, 0},
     };
 
@@ -267,11 +287,11 @@ void UpdateSettings() {
     }
 
     Settings::values.use_hw_shader =
-            LibRetro::FetchVariable("citra_use_hw_shaders", "enabled") == "enabled";
+        LibRetro::FetchVariable("citra_use_hw_shaders", "enabled") == "enabled";
     Settings::values.use_shader_jit =
         LibRetro::FetchVariable("citra_use_shader_jit", "enabled") == "enabled";
     Settings::values.shaders_accurate_mul =
-            LibRetro::FetchVariable("citra_use_acc_mul", "enabled") == "enabled";
+        LibRetro::FetchVariable("citra_use_acc_mul", "enabled") == "enabled";
     Settings::values.use_virtual_sd =
         LibRetro::FetchVariable("citra_use_virtual_sd", "enabled") == "enabled";
     Settings::values.is_new_3ds =
@@ -408,35 +428,50 @@ void UpdateSettings() {
     // Hardcode buttons to bind to libretro - it is entirely redundant to have
     //  two methods of rebinding controls.
     // Citra: A = RETRO_DEVICE_ID_JOYPAD_A (8)
-    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::A] = "button:8,joystick:0,engine:libretro";
+    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::A] =
+        "button:8,joystick:0,engine:libretro";
     // Citra: B = RETRO_DEVICE_ID_JOYPAD_B (0)
-    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::B] = "button:0,joystick:0,engine:libretro";
+    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::B] =
+        "button:0,joystick:0,engine:libretro";
     // Citra: X = RETRO_DEVICE_ID_JOYPAD_X (9)
-    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::X] = "button:9,joystick:0,engine:libretro";
+    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::X] =
+        "button:9,joystick:0,engine:libretro";
     // Citra: Y = RETRO_DEVICE_ID_JOYPAD_Y (1)
-    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Y] = "button:1,joystick:0,engine:libretro";
+    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Y] =
+        "button:1,joystick:0,engine:libretro";
     // Citra: UP = RETRO_DEVICE_ID_JOYPAD_UP (4)
-    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Up] = "button:4,joystick:0,engine:libretro";
+    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Up] =
+        "button:4,joystick:0,engine:libretro";
     // Citra: DOWN = RETRO_DEVICE_ID_JOYPAD_DOWN (5)
-    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Down] = "button:5,joystick:0,engine:libretro";
+    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Down] =
+        "button:5,joystick:0,engine:libretro";
     // Citra: LEFT = RETRO_DEVICE_ID_JOYPAD_LEFT (6)
-    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Left] = "button:6,joystick:0,engine:libretro";
+    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Left] =
+        "button:6,joystick:0,engine:libretro";
     // Citra: RIGHT = RETRO_DEVICE_ID_JOYPAD_RIGHT (7)
-    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Right] = "button:7,joystick:0,engine:libretro";
+    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Right] =
+        "button:7,joystick:0,engine:libretro";
     // Citra: L = RETRO_DEVICE_ID_JOYPAD_L (10)
-    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::L] = "button:10,joystick:0,engine:libretro";
+    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::L] =
+        "button:10,joystick:0,engine:libretro";
     // Citra: R = RETRO_DEVICE_ID_JOYPAD_R (11)
-    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::R] = "button:11,joystick:0,engine:libretro";
+    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::R] =
+        "button:11,joystick:0,engine:libretro";
     // Citra: START = RETRO_DEVICE_ID_JOYPAD_START (3)
-    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Start] = "button:3,joystick:0,engine:libretro";
+    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Start] =
+        "button:3,joystick:0,engine:libretro";
     // Citra: SELECT = RETRO_DEVICE_ID_JOYPAD_SELECT (2)
-    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Select] = "button:2,joystick:0,engine:libretro";
+    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Select] =
+        "button:2,joystick:0,engine:libretro";
     // Citra: ZL = RETRO_DEVICE_ID_JOYPAD_L2 (12)
-    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::ZL] = "button:12,joystick:0,engine:libretro";
+    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::ZL] =
+        "button:12,joystick:0,engine:libretro";
     // Citra: ZR = RETRO_DEVICE_ID_JOYPAD_R2 (13)
-    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::ZR] = "button:13,joystick:0,engine:libretro";
+    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::ZR] =
+        "button:13,joystick:0,engine:libretro";
     // Citra: HOME = RETRO_DEVICE_ID_JOYPAD_L3 (as per above bindings) (14)
-    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Home] = "button:14,joystick:0,engine:libretro";
+    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Home] =
+        "button:14,joystick:0,engine:libretro";
 
     // Circle Pad
     Settings::values.current_input_profile.analogs[0] = "axis:0,joystick:0,engine:libretro";
@@ -466,7 +501,8 @@ void UpdateSettings() {
 
             // Ensure that this new dir exists
             if (!FileUtil::CreateDir(target_dir)) {
-                LOG_ERROR(Frontend, "Failed to create \"{}\". Using Azahar's default paths.", target_dir);
+                LOG_ERROR(Frontend, "Failed to create \"{}\". Using Azahar's default paths.",
+                          target_dir);
             } else {
                 FileUtil::SetUserPath(target_dir);
                 const auto& target_dir_result = FileUtil::GetUserPath(FileUtil::UserPath::UserDir);
@@ -475,7 +511,7 @@ void UpdateSettings() {
         }
     }
 
-    if(!emu_instance->emu_window) {
+    if (!emu_instance->emu_window) {
         emu_instance->emu_window = std::make_unique<EmuWindow_LibRetro>();
     }
 
@@ -497,25 +533,26 @@ void retro_run() {
     // Check if the screen swap button is pressed
     static bool screen_swap_btn_state = false;
     static bool screen_swap_toggled = false;
-    bool screen_swap_btn = !!LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3);
-    if (screen_swap_btn != screen_swap_btn_state)
-    {
-        if (LibRetro::settings.toggle_swap_screen)
-        {
+    bool screen_swap_btn =
+        !!LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3);
+    if (screen_swap_btn != screen_swap_btn_state) {
+        if (LibRetro::settings.toggle_swap_screen) {
             if (!screen_swap_btn_state)
                 screen_swap_toggled = !screen_swap_toggled;
 
             if (screen_swap_toggled)
-                Settings::values.swap_screen = LibRetro::FetchVariable("citra_swap_screen", "Top") != "Bottom";
+                Settings::values.swap_screen =
+                    LibRetro::FetchVariable("citra_swap_screen", "Top") != "Bottom";
             else
-                Settings::values.swap_screen = LibRetro::FetchVariable("citra_swap_screen", "Top") == "Bottom";
-        }
-        else
-        {
+                Settings::values.swap_screen =
+                    LibRetro::FetchVariable("citra_swap_screen", "Top") == "Bottom";
+        } else {
             if (screen_swap_btn)
-                Settings::values.swap_screen = LibRetro::FetchVariable("citra_swap_screen", "Top") != "Bottom";
+                Settings::values.swap_screen =
+                    LibRetro::FetchVariable("citra_swap_screen", "Top") != "Bottom";
             else
-                Settings::values.swap_screen = LibRetro::FetchVariable("citra_swap_screen", "Top") == "Bottom";
+                Settings::values.swap_screen =
+                    LibRetro::FetchVariable("citra_swap_screen", "Top") == "Bottom";
         }
 
         Core::System::GetInstance().ApplySettings();
@@ -556,10 +593,9 @@ void retro_run() {
     }
 }
 
-static bool do_load_game()
-{
-    const Core::System::ResultStatus load_result{Core::System::GetInstance().Load(
-            *emu_instance->emu_window, LibRetro::settings.file_path)};
+static bool do_load_game() {
+    const Core::System::ResultStatus load_result{
+        Core::System::GetInstance().Load(*emu_instance->emu_window, LibRetro::settings.file_path)};
 
     switch (load_result) {
     case Core::System::ResultStatus::Success:
@@ -578,7 +614,8 @@ static bool do_load_game()
         LibRetro::DisplayMessage("Error while loading ROM: The ROM format is not supported.");
         return false;
     case Core::System::ResultStatus::ErrorLoader_ErrorGbaTitle:
-        LibRetro::DisplayMessage("Error loading the specified application as it is GBA Virtual Console");
+        LibRetro::DisplayMessage(
+            "Error loading the specified application as it is GBA Virtual Console");
         return false;
     case Core::System::ResultStatus::ErrorNotInitialized:
         LibRetro::DisplayMessage("CPUCore not initialized");
@@ -592,7 +629,8 @@ static bool do_load_game()
     }
 
     if (Settings::values.use_disk_shader_cache) {
-        Core::System::GetInstance().GPU().Renderer().Rasterizer()->LoadDefaultDiskResources(false, nullptr);
+        Core::System::GetInstance().GPU().Renderer().Rasterizer()->LoadDefaultDiskResources(
+            false, nullptr);
     }
 
     return true;
@@ -612,8 +650,8 @@ static void context_reset() {
         // Check to see if the frontend provides us with OpenGL symbols
         if (emu_instance->hw_render.get_proc_address != nullptr) {
             bool loaded = Settings::values.use_gles
-                ? gladLoadGLES2Loader((GLADloadproc)load_opengl_func)
-                : gladLoadGLLoader((GLADloadproc)load_opengl_func);
+                              ? gladLoadGLES2Loader((GLADloadproc)load_opengl_func)
+                              : gladLoadGLLoader((GLADloadproc)load_opengl_func);
 
             if (!loaded) {
                 LOG_CRITICAL(Frontend, "Glad failed to load (frontend-provided symbols)!");
@@ -652,7 +690,8 @@ static void context_destroy() {
 void retro_reset() {
     LOG_DEBUG(Frontend, "retro_reset");
     Core::System::GetInstance().Shutdown();
-    if (Core::System::GetInstance().Load(*emu_instance->emu_window, LibRetro::settings.file_path) != Core::System::ResultStatus::Success) {
+    if (Core::System::GetInstance().Load(*emu_instance->emu_window, LibRetro::settings.file_path) !=
+        Core::System::ResultStatus::Success) {
         LOG_ERROR(Frontend, "Unable lo load on retro_reset");
     }
 }
@@ -751,7 +790,8 @@ size_t retro_serialize_size() {
 }
 
 bool retro_serialize(void* data, size_t size) {
-    if(!savestate.has_value()) return false;
+    if (!savestate.has_value())
+        return false;
 
     memcpy(data, (*savestate).data(), size);
     savestate.reset();
@@ -771,16 +811,15 @@ bool retro_unserialize(const void* data, size_t size) {
 }
 
 void* retro_get_memory_data(unsigned id) {
-    if ( id == RETRO_MEMORY_SYSTEM_RAM )
+    if (id == RETRO_MEMORY_SYSTEM_RAM)
         return Core::System::GetInstance().Memory().GetFCRAMPointer(
-            Core::System::GetInstance().Kernel().memory_regions[0]->base
-        );
+            Core::System::GetInstance().Kernel().memory_regions[0]->base);
 
     return NULL;
 }
 
 size_t retro_get_memory_size(unsigned id) {
-    if ( id == RETRO_MEMORY_SYSTEM_RAM )
+    if (id == RETRO_MEMORY_SYSTEM_RAM)
         return Core::System::GetInstance().Kernel().memory_regions[0]->size;
 
     return 0;

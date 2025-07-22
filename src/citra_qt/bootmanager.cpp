@@ -28,9 +28,9 @@
 #include "video_core/renderer_software/renderer_software.h"
 
 #ifdef ENABLE_OPENGL
-#include <glad/glad.h>
 #include <QOffscreenSurface>
 #include <QOpenGLContext>
+#include <glad/glad.h>
 #endif
 
 #if defined(__APPLE__)

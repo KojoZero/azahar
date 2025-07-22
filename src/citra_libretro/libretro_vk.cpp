@@ -2,29 +2,28 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
-#include <memory>
-#include <vector>
 #include <algorithm>
+#include <memory>
 #include <stdexcept>
+#include <vector>
 #include <boost/container/static_vector.hpp>
 #include <fmt/format.h>
 
+#include "citra_libretro/environment.h"
+#include "citra_libretro/libretro_vk.h"
 #include "common/assert.h"
 #include "common/logging/log.h"
 #include "common/settings.h"
 #include "core/frontend/emu_window.h"
-#include "citra_libretro/libretro_vk.h"
-#include "citra_libretro/environment.h"
 #include "video_core/renderer_vulkan/vk_scheduler.h"
 
 #include <vk_mem_alloc.h>
 
-static const struct retro_hw_render_interface_vulkan *vulkan_intf;
+static const struct retro_hw_render_interface_vulkan* vulkan_intf;
 
 namespace LibRetro {
 
-void VulkanResetContext()
-{
+void VulkanResetContext() {
     LibRetro::GetHWRenderInterface((void**)&vulkan_intf);
 
     // Initialize dispatcher with LibRetro's function pointers
@@ -34,18 +33,17 @@ void VulkanResetContext()
     VULKAN_HPP_DEFAULT_DISPATCHER.init(vk_instance);
 }
 
-}
+} // namespace LibRetro
 
 namespace Vulkan {
 
-std::shared_ptr<Common::DynamicLibrary> OpenLibrary([[maybe_unused]] Frontend::GraphicsContext* context)
-{
+std::shared_ptr<Common::DynamicLibrary> OpenLibrary(
+    [[maybe_unused]] Frontend::GraphicsContext* context) {
     // the frontend takes care of this, we'll get the instance later
     return std::make_shared<Common::DynamicLibrary>();
 }
 
-vk::SurfaceKHR CreateSurface(vk::Instance instance, const Frontend::EmuWindow& emu_window)
-{
+vk::SurfaceKHR CreateSurface(vk::Instance instance, const Frontend::EmuWindow& emu_window) {
     // LibRetro cores don't use surfaces - we render to our own output texture
     // This function should not be called in LibRetro mode
     LOG_WARNING(Render_Vulkan, "CreateSurface called in LibRetro mode - this should not happen");
@@ -55,23 +53,21 @@ vk::SurfaceKHR CreateSurface(vk::Instance instance, const Frontend::EmuWindow& e
 vk::UniqueInstance CreateInstance([[maybe_unused]] const Common::DynamicLibrary& library,
                                   [[maybe_unused]] Frontend::WindowSystemType window_type,
                                   [[maybe_unused]] bool enable_validation,
-                                  [[maybe_unused]] bool dump_command_buffers)
-{
+                                  [[maybe_unused]] bool dump_command_buffers) {
     // LibRetro cores don't create instances - frontend handles this
     LOG_WARNING(Render_Vulkan, "CreateInstance called in LibRetro mode - this should not happen");
     return vk::UniqueInstance{};
 }
 
-DebugCallback CreateDebugCallback(vk::Instance instance, bool& debug_utils_supported)
-{
+DebugCallback CreateDebugCallback(vk::Instance instance, bool& debug_utils_supported) {
     // LibRetro handles debugging, return empty callback
     debug_utils_supported = false;
     return {};
 }
 
-LibRetroVKInstance::LibRetroVKInstance(Frontend::EmuWindow& window, [[maybe_unused]] u32 physical_device_index)
-    : Instance(Instance::NoInit{})
-{
+LibRetroVKInstance::LibRetroVKInstance(Frontend::EmuWindow& window,
+                                       [[maybe_unused]] u32 physical_device_index)
+    : Instance(Instance::NoInit{}) {
     // Ensure LibRetro interface is available
     if (!vulkan_intf) {
         LOG_CRITICAL(Render_Vulkan, "LibRetro Vulkan interface not initialized!");
@@ -123,20 +119,16 @@ LibRetroVKInstance::LibRetroVKInstance(Frontend::EmuWindow& window, [[maybe_unus
     LOG_INFO(Render_Vulkan, "Driver: {}", GetDriverVersionName());
 }
 
-vk::Instance LibRetroVKInstance::GetInstance() const
-{
+vk::Instance LibRetroVKInstance::GetInstance() const {
     return vk::Instance{vulkan_intf->instance};
 }
 
-vk::Device LibRetroVKInstance::GetDevice() const
-{
+vk::Device LibRetroVKInstance::GetDevice() const {
     return vk::Device{vulkan_intf->device};
 }
 
-
 // Helper methods for LibRetroVKInstance
-void LibRetroVKInstance::InitializeVendorInfo()
-{
+void LibRetroVKInstance::InitializeVendorInfo() {
     const u32 vendor_id = properties.vendorID;
     switch (vendor_id) {
     case 0x1002:
@@ -168,7 +160,9 @@ void LibRetroVKInstance::InitializeVendorInfo()
     // Get driver ID if available
     try {
         const vk::PhysicalDeviceDriverProperties driver_props =
-            physical_device.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceDriverProperties>().get<vk::PhysicalDeviceDriverProperties>();
+            physical_device
+                .getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceDriverProperties>()
+                .get<vk::PhysicalDeviceDriverProperties>();
         driver_id = driver_props.driverID;
     } catch (const vk::SystemError& e) {
         LOG_WARNING(Render_Vulkan, "Failed to query driver properties: {}", e.what());
@@ -176,10 +170,10 @@ void LibRetroVKInstance::InitializeVendorInfo()
     }
 }
 
-void LibRetroVKInstance::DetectExtensionSupport()
-{
+void LibRetroVKInstance::DetectExtensionSupport() {
     // Get available device extensions
-    const std::vector<vk::ExtensionProperties> extensions = physical_device.enumerateDeviceExtensionProperties();
+    const std::vector<vk::ExtensionProperties> extensions =
+        physical_device.enumerateDeviceExtensionProperties();
     available_extensions.clear();
     available_extensions.reserve(extensions.size());
 
@@ -189,33 +183,37 @@ void LibRetroVKInstance::DetectExtensionSupport()
 
     // Check for important extensions
     auto has_extension = [&](const char* name) {
-        return std::find(available_extensions.begin(), available_extensions.end(), name) != available_extensions.end();
+        return std::find(available_extensions.begin(), available_extensions.end(), name) !=
+               available_extensions.end();
     };
 
     timeline_semaphores = has_extension(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
     LOG_DEBUG(Render_Vulkan, "Timeline semaphore extension available: {}", timeline_semaphores);
     extended_dynamic_state = has_extension(VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME);
-    LOG_DEBUG(Render_Vulkan, "Extended dynamic state extension available: {}", extended_dynamic_state);
+    LOG_DEBUG(Render_Vulkan, "Extended dynamic state extension available: {}",
+              extended_dynamic_state);
     custom_border_color = has_extension(VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME);
     index_type_uint8 = has_extension(VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME);
     fragment_shader_interlock = has_extension(VK_EXT_FRAGMENT_SHADER_INTERLOCK_EXTENSION_NAME);
     image_format_list = has_extension(VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME);
-    pipeline_creation_cache_control = has_extension(VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME);
+    pipeline_creation_cache_control =
+        has_extension(VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME);
     fragment_shader_barycentric = has_extension(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME);
     shader_stencil_export = has_extension(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
     external_memory_host = has_extension(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
 
-    // Apply MoltenVK workarounds - fragment shader barycentric uses PerVertexKHR which isn't supported in MSL
+    // Apply MoltenVK workarounds - fragment shader barycentric uses PerVertexKHR which isn't
+    // supported in MSL
     if (driver_id == vk::DriverIdKHR::eMoltenvk) {
-        LOG_INFO(Render_Vulkan, "Disabling fragment_shader_barycentric on MoltenVK (PerVertexKHR not supported in MSL)");
+        LOG_INFO(Render_Vulkan, "Disabling fragment_shader_barycentric on MoltenVK (PerVertexKHR "
+                                "not supported in MSL)");
         fragment_shader_barycentric = false;
     }
 
     LOG_DEBUG(Render_Vulkan, "Detected {} device extensions", available_extensions.size());
 }
 
-void LibRetroVKInstance::DetectDeviceCapabilities()
-{
+void LibRetroVKInstance::DetectDeviceCapabilities() {
     // Query extended features if available
     vk::PhysicalDeviceFeatures2 features2;
     vk::PhysicalDeviceTimelineSemaphoreFeatures timeline_features;
@@ -240,11 +238,14 @@ void LibRetroVKInstance::DetectDeviceCapabilities()
         try {
             // Test if the function pointer is actually available
             if (!VULKAN_HPP_DEFAULT_DISPATCHER.vkGetSemaphoreCounterValueKHR) {
-                LOG_WARNING(Render_Vulkan, "Timeline semaphore extension reported but function not loaded, disabling");
+                LOG_WARNING(
+                    Render_Vulkan,
+                    "Timeline semaphore extension reported but function not loaded, disabling");
                 timeline_semaphores = false;
             }
         } catch (const std::exception& e) {
-            LOG_WARNING(Render_Vulkan, "Timeline semaphore function validation failed: {}, disabling", e.what());
+            LOG_WARNING(Render_Vulkan,
+                        "Timeline semaphore function validation failed: {}, disabling", e.what());
             timeline_semaphores = false;
         }
     }
@@ -254,19 +255,23 @@ void LibRetroVKInstance::DetectDeviceCapabilities()
         try {
             // Test if setCullModeEXT function pointer is actually available
             if (!VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdSetCullModeEXT) {
-                LOG_WARNING(Render_Vulkan, "Extended dynamic state extension reported but setCullModeEXT not loaded, disabling");
+                LOG_WARNING(Render_Vulkan, "Extended dynamic state extension reported but "
+                                           "setCullModeEXT not loaded, disabling");
                 extended_dynamic_state = false;
             } else {
                 // Also check other critical EXT functions used by the pipeline cache
                 if (!VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdSetDepthTestEnableEXT ||
                     !VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdSetDepthWriteEnableEXT ||
                     !VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdSetFrontFaceEXT) {
-                    LOG_WARNING(Render_Vulkan, "Extended dynamic state extension missing some function pointers, disabling");
+                    LOG_WARNING(Render_Vulkan, "Extended dynamic state extension missing some "
+                                               "function pointers, disabling");
                     extended_dynamic_state = false;
                 }
             }
         } catch (const std::exception& e) {
-            LOG_WARNING(Render_Vulkan, "Extended dynamic state function validation failed: {}, disabling", e.what());
+            LOG_WARNING(Render_Vulkan,
+                        "Extended dynamic state function validation failed: {}, disabling",
+                        e.what());
             extended_dynamic_state = false;
         }
     }
@@ -291,7 +296,8 @@ void LibRetroVKInstance::DetectDeviceCapabilities()
     // Detect minimum vertex stride alignment
     min_vertex_stride_alignment = 1;
     if (properties.limits.minTexelBufferOffsetAlignment > 1) {
-        min_vertex_stride_alignment = static_cast<u32>(properties.limits.minTexelBufferOffsetAlignment);
+        min_vertex_stride_alignment =
+            static_cast<u32>(properties.limits.minTexelBufferOffsetAlignment);
     }
 
     LOG_INFO(Render_Vulkan, "Timeline semaphores final status: {}", timeline_semaphores);
@@ -306,8 +312,7 @@ void LibRetroVKInstance::DetectDeviceCapabilities()
 PresentWindow::PresentWindow(Frontend::EmuWindow& emu_window_, const Instance& instance_,
                              Scheduler& scheduler_, [[maybe_unused]] bool low_refresh_rate)
     : emu_window{emu_window_}, instance{instance_}, scheduler{scheduler_},
-      graphics_queue{instance.GetGraphicsQueue()}
-{
+      graphics_queue{instance.GetGraphicsQueue()} {
     const vk::Device device = instance.GetDevice();
 
     LOG_INFO(Render_Vulkan, "Initializing LibRetro PresentWindow");
@@ -328,12 +333,11 @@ PresentWindow::PresentWindow(Frontend::EmuWindow& emu_window_, const Instance& i
     CreateOutputTexture(layout.width, layout.height);
     CreateFrameResources();
 
-    LOG_INFO(Render_Vulkan, "LibRetro PresentWindow initialized with {}x{}",
-             layout.width, layout.height);
+    LOG_INFO(Render_Vulkan, "LibRetro PresentWindow initialized with {}x{}", layout.width,
+             layout.height);
 }
 
-PresentWindow::~PresentWindow()
-{
+PresentWindow::~PresentWindow() {
     const vk::Device device = instance.GetDevice();
 
     LOG_DEBUG(Render_Vulkan, "Destroying LibRetro PresentWindow");
@@ -357,8 +361,7 @@ PresentWindow::~PresentWindow()
     }
 }
 
-void PresentWindow::CreateOutputTexture(u32 width, u32 height)
-{
+void PresentWindow::CreateOutputTexture(u32 width, u32 height) {
     if (width == 0 || height == 0) {
         LOG_ERROR(Render_Vulkan, "Invalid output texture dimensions: {}x{}", width, height);
         return;
@@ -387,10 +390,10 @@ void PresentWindow::CreateOutputTexture(u32 width, u32 height)
         .arrayLayers = 1,
         .samples = vk::SampleCountFlagBits::e1,
         .tiling = vk::ImageTiling::eOptimal,
-        .usage = vk::ImageUsageFlagBits::eColorAttachment |      // For rendering
-                 vk::ImageUsageFlagBits::eTransferSrc |           // Required by LibRetro
-                 vk::ImageUsageFlagBits::eSampled |               // Required by LibRetro
-                 vk::ImageUsageFlagBits::eTransferDst,            // For clearing
+        .usage = vk::ImageUsageFlagBits::eColorAttachment | // For rendering
+                 vk::ImageUsageFlagBits::eTransferSrc |     // Required by LibRetro
+                 vk::ImageUsageFlagBits::eSampled |         // Required by LibRetro
+                 vk::ImageUsageFlagBits::eTransferDst,      // For clearing
         .sharingMode = vk::SharingMode::eExclusive,
         .initialLayout = vk::ImageLayout::eUndefined,
     };
@@ -402,11 +405,8 @@ void PresentWindow::CreateOutputTexture(u32 width, u32 height)
 
     VkImage vk_image;
     const VkResult result = vmaCreateImage(instance.GetAllocator(),
-                                          reinterpret_cast<const VkImageCreateInfo*>(&image_info),
-                                          &alloc_info,
-                                          &vk_image,
-                                          &output_allocation,
-                                          nullptr);
+                                           reinterpret_cast<const VkImageCreateInfo*>(&image_info),
+                                           &alloc_info, &vk_image, &output_allocation, nullptr);
 
     if (result != VK_SUCCESS) {
         LOG_CRITICAL(Render_Vulkan, "Failed to create output image: {}", static_cast<int>(result));
@@ -420,27 +420,28 @@ void PresentWindow::CreateOutputTexture(u32 width, u32 height)
         .image = output_image,
         .viewType = vk::ImageViewType::e2D,
         .format = output_format,
-        .components = {
-            .r = vk::ComponentSwizzle::eIdentity,
-            .g = vk::ComponentSwizzle::eIdentity,
-            .b = vk::ComponentSwizzle::eIdentity,
-            .a = vk::ComponentSwizzle::eIdentity,
-        },
-        .subresourceRange = {
-            .aspectMask = vk::ImageAspectFlagBits::eColor,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        },
+        .components =
+            {
+                .r = vk::ComponentSwizzle::eIdentity,
+                .g = vk::ComponentSwizzle::eIdentity,
+                .b = vk::ComponentSwizzle::eIdentity,
+                .a = vk::ComponentSwizzle::eIdentity,
+            },
+        .subresourceRange =
+            {
+                .aspectMask = vk::ImageAspectFlagBits::eColor,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
     };
     output_image_view = device.createImageView(output_view_create_info);
 
     LOG_DEBUG(Render_Vulkan, "Created LibRetro output texture: {}x{}", width, height);
 }
 
-void PresentWindow::DestroyOutputTexture()
-{
+void PresentWindow::DestroyOutputTexture() {
     if (!output_image) {
         return;
     }
@@ -453,9 +454,8 @@ void PresentWindow::DestroyOutputTexture()
     }
 
     if (output_allocation) {
-        vmaDestroyImage(instance.GetAllocator(),
-                       static_cast<VkImage>(output_image),
-                       output_allocation);
+        vmaDestroyImage(instance.GetAllocator(), static_cast<VkImage>(output_image),
+                        output_allocation);
         output_allocation = {};
     }
 
@@ -464,8 +464,7 @@ void PresentWindow::DestroyOutputTexture()
     output_height = 0;
 }
 
-vk::RenderPass PresentWindow::CreateRenderpass()
-{
+vk::RenderPass PresentWindow::CreateRenderpass() {
     const vk::AttachmentDescription color_attachment = {
         .format = output_format,
         .samples = vk::SampleCountFlagBits::e1,
@@ -474,7 +473,7 @@ vk::RenderPass PresentWindow::CreateRenderpass()
         .stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
         .stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
         .initialLayout = vk::ImageLayout::eUndefined,
-        .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal,  // Ready for LibRetro
+        .finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal, // Ready for LibRetro
     };
 
     const vk::AttachmentReference color_ref = {
@@ -509,8 +508,7 @@ vk::RenderPass PresentWindow::CreateRenderpass()
     return instance.GetDevice().createRenderPass(renderpass_info);
 }
 
-void PresentWindow::CreateFrameResources()
-{
+void PresentWindow::CreateFrameResources() {
     const vk::Device device = instance.GetDevice();
     const u32 frame_count = 2; // Double buffering for LibRetro
 
@@ -533,9 +531,9 @@ void PresentWindow::CreateFrameResources()
         Frame& frame = frame_pool[i];
         frame.width = output_width;
         frame.height = output_height;
-        frame.image = output_image;           // All frames use the same output texture
+        frame.image = output_image; // All frames use the same output texture
         frame.image_view = output_image_view;
-        frame.allocation = {};                // VMA allocation handled separately
+        frame.allocation = {}; // VMA allocation handled separately
         frame.cmdbuf = command_buffers[i];
         frame.render_ready = device.createSemaphore({});
         frame.present_done = device.createFence({.flags = vk::FenceCreateFlagBits::eSignaled});
@@ -555,8 +553,7 @@ void PresentWindow::CreateFrameResources()
     LOG_DEBUG(Render_Vulkan, "Created {} frame resources for LibRetro", frame_count);
 }
 
-void PresentWindow::DestroyFrameResources()
-{
+void PresentWindow::DestroyFrameResources() {
     if (frame_pool.empty()) {
         return;
     }
@@ -579,8 +576,7 @@ void PresentWindow::DestroyFrameResources()
     current_frame_index = 0;
 }
 
-Frame* PresentWindow::GetRenderFrame()
-{
+Frame* PresentWindow::GetRenderFrame() {
     if (frame_pool.empty()) {
         LOG_ERROR(Render_Vulkan, "No frames available in LibRetro PresentWindow");
         return nullptr;
@@ -596,14 +592,14 @@ Frame* PresentWindow::GetRenderFrame()
     if (vulkan_intf && vulkan_intf->get_sync_index) {
         const u32 sync_index = vulkan_intf->get_sync_index(vulkan_intf->handle);
         frame_index = sync_index % frame_pool.size();
-        LOG_TRACE(Render_Vulkan, "LibRetro sync index: {}, using frame: {}", sync_index, frame_index);
+        LOG_TRACE(Render_Vulkan, "LibRetro sync index: {}, using frame: {}", sync_index,
+                  frame_index);
     }
 
     return &frame_pool[frame_index];
 }
 
-void PresentWindow::RecreateFrame(Frame* frame, u32 width, u32 height)
-{
+void PresentWindow::RecreateFrame(Frame* frame, u32 width, u32 height) {
     if (!frame) {
         LOG_ERROR(Render_Vulkan, "Invalid frame for recreation");
         return;
@@ -613,12 +609,13 @@ void PresentWindow::RecreateFrame(Frame* frame, u32 width, u32 height)
         return; // No change needed
     }
 
-    LOG_DEBUG(Render_Vulkan, "Recreating LibRetro frame: {}x{} -> {}x{}",
-              frame->width, frame->height, width, height);
+    LOG_DEBUG(Render_Vulkan, "Recreating LibRetro frame: {}x{} -> {}x{}", frame->width,
+              frame->height, width, height);
 
     // Wait for frame to be idle
     const vk::Device device = instance.GetDevice();
-    [[maybe_unused]] const vk::Result wait_result = device.waitForFences(frame->present_done, VK_TRUE, UINT64_MAX);
+    [[maybe_unused]] const vk::Result wait_result =
+        device.waitForFences(frame->present_done, VK_TRUE, UINT64_MAX);
 
     // Recreate output texture with new dimensions
     CreateOutputTexture(width, height);
@@ -629,8 +626,7 @@ void PresentWindow::RecreateFrame(Frame* frame, u32 width, u32 height)
     LOG_INFO(Render_Vulkan, "LibRetro frame recreated for {}x{}", width, height);
 }
 
-void PresentWindow::Present(Frame* frame)
-{
+void PresentWindow::Present(Frame* frame) {
     if (!frame) {
         LOG_ERROR(Render_Vulkan, "Cannot present null frame");
         return;
@@ -653,8 +649,8 @@ void PresentWindow::Present(Frame* frame)
     // RetroArch handles all synchronization through its own mechanisms
     LOG_DEBUG(Render_Vulkan, "Submitting frame with no semaphores (RetroArch manages sync)");
 
-    vulkan_intf->set_image(vulkan_intf->handle, &libretro_image,
-                          0, nullptr, instance.GetGraphicsQueueFamilyIndex());
+    vulkan_intf->set_image(vulkan_intf->handle, &libretro_image, 0, nullptr,
+                           instance.GetGraphicsQueueFamilyIndex());
 
     // Call EmuWindow SwapBuffers to trigger LibRetro video frame submission
     emu_window.SwapBuffers();
@@ -665,8 +661,7 @@ void PresentWindow::Present(Frame* frame)
     LOG_TRACE(Render_Vulkan, "Frame presented to LibRetro: {}x{}", frame->width, frame->height);
 }
 
-void PresentWindow::WaitPresent()
-{
+void PresentWindow::WaitPresent() {
     if (frame_pool.empty()) {
         return;
     }
@@ -682,12 +677,12 @@ void PresentWindow::WaitPresent()
     }
 
     if (!fences.empty()) {
-        [[maybe_unused]] const vk::Result wait_result = device.waitForFences(fences, VK_TRUE, UINT64_MAX);
+        [[maybe_unused]] const vk::Result wait_result =
+            device.waitForFences(fences, VK_TRUE, UINT64_MAX);
     }
 }
 
-void PresentWindow::NotifySurfaceChanged()
-{
+void PresentWindow::NotifySurfaceChanged() {
     // LibRetro doesn't use surfaces, so this is a no-op
     LOG_DEBUG(Render_Vulkan, "Surface change notification ignored in LibRetro mode");
 }
@@ -696,31 +691,28 @@ void PresentWindow::NotifySurfaceChanged()
 // MasterSemaphoreLibRetro Implementation
 // ============================================================================
 
-MasterSemaphoreLibRetro::MasterSemaphoreLibRetro(const Instance& instance)
-{
+MasterSemaphoreLibRetro::MasterSemaphoreLibRetro(const Instance& instance) {
     // No internal synchronization objects needed - RetroArch handles everything
 }
 
 MasterSemaphoreLibRetro::~MasterSemaphoreLibRetro() = default;
 
-void MasterSemaphoreLibRetro::Refresh()
-{
+void MasterSemaphoreLibRetro::Refresh() {
     // No internal state to refresh - RetroArch manages synchronization
     // Simply advance our tick counter to match submissions
     gpu_tick.store(current_tick.load(std::memory_order_acquire), std::memory_order_release);
 }
 
-void MasterSemaphoreLibRetro::Wait(u64 tick)
-{
+void MasterSemaphoreLibRetro::Wait(u64 tick) {
     // No waiting needed - RetroArch handles synchronization through its own mechanisms
     // We trust that RetroArch's frame pacing will handle synchronization properly
     // Simply mark the tick as completed
-    gpu_tick.store(std::max(gpu_tick.load(std::memory_order_acquire), tick), std::memory_order_release);
+    gpu_tick.store(std::max(gpu_tick.load(std::memory_order_acquire), tick),
+                   std::memory_order_release);
 }
 
 void MasterSemaphoreLibRetro::SubmitWork(vk::CommandBuffer cmdbuf, vk::Semaphore wait,
-                                         vk::Semaphore signal, u64 signal_value)
-{
+                                         vk::Semaphore signal, u64 signal_value) {
     if (!vulkan_intf) {
         LOG_ERROR(Render_Vulkan, "LibRetro Vulkan interface not available for command submission");
         return;
@@ -731,12 +723,12 @@ void MasterSemaphoreLibRetro::SubmitWork(vk::CommandBuffer cmdbuf, vk::Semaphore
     // CRITICAL: Following PPSSPP pattern - strip out ALL semaphores!
     // RetroArch handles synchronization entirely through its own mechanisms
     const vk::SubmitInfo submit_info = {
-        .waitSemaphoreCount = 0,      // No wait semaphores - RetroArch manages this
+        .waitSemaphoreCount = 0, // No wait semaphores - RetroArch manages this
         .pWaitSemaphores = nullptr,
         .pWaitDstStageMask = nullptr,
         .commandBufferCount = 1u,
         .pCommandBuffers = &cmdbuf,
-        .signalSemaphoreCount = 0,    // No signal semaphores - RetroArch manages this
+        .signalSemaphoreCount = 0, // No signal semaphores - RetroArch manages this
         .pSignalSemaphores = nullptr,
     };
 
@@ -770,8 +762,7 @@ void MasterSemaphoreLibRetro::SubmitWork(vk::CommandBuffer cmdbuf, vk::Semaphore
 }
 
 // Factory function for scheduler to create LibRetro MasterSemaphore
-std::unique_ptr<MasterSemaphore> CreateLibRetroMasterSemaphore(const Instance& instance)
-{
+std::unique_ptr<MasterSemaphore> CreateLibRetroMasterSemaphore(const Instance& instance) {
     return std::make_unique<MasterSemaphoreLibRetro>(instance);
 }
 
