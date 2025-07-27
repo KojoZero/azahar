@@ -230,7 +230,7 @@ else()
     )
     target_link_libraries(zstd_seekable PUBLIC libzstd_static)
 
-    target_link_libraries(libzstd_static INTERFACE zstd_seekable)
+    target_link_libraries(libzstd_static zstd_seekable)
 
     add_library(zstd ALIAS libzstd_static)
 

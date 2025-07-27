@@ -62,7 +62,7 @@ libretro-build-windows-x64:
     - .libretro-windows-cmake-x86_64
   variables:
     EXTRA_PATH: bin/Release
-    CORE_ARGS: ${BASE_CORE_ARGS} -DENABLE_LTO=OFF
+    CORE_ARGS: ${BASE_CORE_ARGS} -DENABLE_LTO=OFF -G Ninja
   before_script:
     - export NUMPROC=$(($(nproc)/5))
     - sudo apt-get update -qy

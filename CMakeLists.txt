@@ -21,9 +21,10 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/externals/cmake-modules")
 include(DownloadExternals)
 include(CMakeDependentOption)
-include(FindPkgConfig)
 
 project(citra LANGUAGES C CXX ASM)
+# must be invoked after project() command when using CMAKE_TOOLCHAIN_FILE
+include(FindPkgConfig)
 if (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
     enable_language(OBJC OBJCXX)
 endif()
