@@ -9,7 +9,10 @@
 
 namespace LibRetro {
 
-enum CStickFunction { Both, CStick, Touchscreen };
+enum CStickFunction { Both, CStick, Touchscreen, Toggle};
+
+enum AnalogToggleState{ ToggledMain, ToggledAlternate};
+
 
 struct CoreSettings {
 
@@ -17,7 +20,21 @@ struct CoreSettings {
 
     float deadzone = 1.f;
 
+    int maxspeed;
+
+    double responsecurve;
+
+    double edgeboostdeadzone;
+
+    double preboostratio;
+
     LibRetro::CStickFunction analog_function;
+
+    LibRetro::AnalogToggleState analog_toggle;
+
+    bool analog_cstick_enabled;
+
+    bool analog_touch_enabled;
 
     bool mouse_touchscreen;
 

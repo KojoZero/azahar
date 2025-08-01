@@ -153,16 +153,30 @@ void LibRetro::OnConfigureEnvironment() {
         {"citra_swap_screen", "Prominent 3DS screen; Top|Bottom"},
         {"citra_swap_screen_mode", "Swap Screen Mode; Toggle|Hold"},
         {"citra_analog_function",
-         "Right analog function; C-Stick and Touchscreen Pointer|Touchscreen Pointer|C-Stick"},
-        {"citra_deadzone", "Emulated pointer deadzone (%); 15|20|25|30|35|0|5|10"},
+         "Right analog function; Touchscreen and C-Stick/Gyro (Toggle)|Touchscreen and C-Stick/Gyro|Touchscreen|C-Stick/Gyro"},
+        {"citra_deadzone", "Emulated pointer deadzone (%); 10|OFF|5|15|20|25|30|35"},
+        {"citra_maxspeed", "Emulated pointer max speed; 5|0|1|2|3|4|6|7|8|9|10"},
+        {"citra_responsecurve", "Emulated pointer response curve; 1.5|Linear|2"},
+        {"citra_edgeboostdeadzone", "Emulated pointer edge boost deadzone (%) (OFF disables edgeboost); 99|OFF|90|95"},
+        {"citra_preboostratio", "Emulated pointer pre-boost ratio (only applies if edgeboost is enabled); 0.5|0.3|0.4|0.6|0.7"},
+        {"citra_touchscreen", "Enable touchscreen; disabled|enabled"},
+        {"citra_touchscreen_pointer",
+         "Use touchscreen pointer; disabled|enabled (experimental)"},
+        {"citra_touchscreen_pointer_speed", "Touchscreen pointer speed; 1x|2x|3x|4x|5x"},
+        {"citra_touchscreen_pointer_sensitivity",
+         "Touchscreen pointer sensitivity; 1x|2x|3x|4x|5x"},
+        {"citra_touchscreen_pointer_acceleration",
+         "Touchscreen pointer acceleration; 0.0|0.1|0.2|0.3|0.4|0.5"},
+        {"citra_enable_emulated_pointer", "Enable emulated pointer; disabled|enabled"},
+        {"citra_enable_mouse_pointer", "Use mouse pointer for touchscreen; disabled|enabled"},
         {"citra_mouse_touchscreen",
          "Simulate touchscreen interactions with mouse; enabled|disabled"},
         {"citra_touch_touchscreen",
          "Simulate touchscreen interactions with touchscreen; disabled|enabled"},
-        {"citra_render_touchscreen", "Render simulated touchscreen interactions; disabled|enabled"},
+        {"citra_render_touchscreen", "Render simulated touchscreen interactions; enabled|disabled"},
         {"citra_use_virtual_sd", "Enable virtual SD card; enabled|disabled"},
         {"citra_use_libretro_save_path", "Savegame location; LibRetro Default|Azahar Default"},
-        {"citra_is_new_3ds", "3DS system model; Old 3DS|New 3DS"},
+        {"citra_is_new_3ds", "3DS system model; New 3DS|Old 3DS"},
         {"citra_region_value",
          "3DS system region; Auto|Japan|USA|Europe|Australia|China|Korea|Taiwan"},
         {"citra_language",
@@ -229,19 +243,19 @@ void UpdateSettings() {
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L, "L"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2, "ZL"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R, "R"},
-        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, "ZR"},
+        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, "Touchscreen Touch / Gyro (Hold)"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select"},
-        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "Home/Swap screens"},
-        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3, "Touch Screen Touch"},
+        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "Toggle Touchscreen and C-Stick/Gyro Mode"},
+        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3, "ZR"},
         {0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X,
          "Circle Pad X"},
         {0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y,
          "Circle Pad Y"},
         {0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X,
-         "C-Stick / Pointer X"},
+         "Pointer X / C-Stick / Gyro Yaw"},
         {0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y,
-         "C-Stick / Pointer Y"},
+         "Pointer Y / C-Stick / Gyro Pitch"},
         {0, 0},
     };
 
@@ -329,7 +343,7 @@ void UpdateSettings() {
     LibRetro::settings.touch_touchscreen =
         LibRetro::FetchVariable("citra_touch_touchscreen", "disabled") == "enabled";
     LibRetro::settings.render_touchscreen =
-        LibRetro::FetchVariable("citra_render_touchscreen", "disabled") == "enabled";
+        LibRetro::FetchVariable("citra_render_touchscreen", "enabled") == "enabled";
 
     // These values are a bit more hard to define, unfortunately.
     auto scaling = LibRetro::FetchVariable("citra_resolution_factor", "1x (Native)");
@@ -357,22 +371,50 @@ void UpdateSettings() {
         Settings::values.layout_option = Settings::LayoutOption::Default;
     }
 
-    auto deadzone = LibRetro::FetchVariable("citra_deadzone", "15");
-    LibRetro::settings.deadzone = (float)std::stoi(deadzone) / 100;
+    auto deadzone = LibRetro::FetchVariable("citra_deadzone", "10");
+    if (deadzone == "OFF"){
+        LibRetro::settings.deadzone = 0;
+    } else {
+        LibRetro::settings.deadzone = (float)std::stoi(deadzone) / 100;
+    }
+
+    auto maxspeed = LibRetro::FetchVariable("citra_maxspeed", "5");
+    LibRetro::settings.maxspeed = std::stoi(maxspeed);
+
+    auto responsecurve = LibRetro::FetchVariable("citra_responsecurve", "1.5");
+    if (responsecurve == "Linear"){
+        LibRetro::settings.responsecurve = 1.0;
+    } else {
+        LibRetro::settings.responsecurve = std::stod(responsecurve);
+    }
+
+    auto edgeboostdeadzone = LibRetro::FetchVariable("citra_edgeboostdeadzone", "99");
+    if (edgeboostdeadzone == "OFF") {
+        LibRetro::settings.edgeboostdeadzone = 0.0;
+    } else {
+        LibRetro::settings.edgeboostdeadzone = (double)std::stoi(edgeboostdeadzone) / 100;
+    }
+
+    auto preboostratio = LibRetro::FetchVariable("citra_preboostratio", "0.5");
+    LibRetro::settings.preboostratio = std::stod(preboostratio);
 
     auto analog_function =
-        LibRetro::FetchVariable("citra_analog_function", "C-Stick and Touchscreen Pointer");
-
-    if (analog_function == "C-Stick and Touchscreen Pointer") {
+        LibRetro::FetchVariable("citra_analog_function", "Touchscreen and C-Stick/Gyro (Toggle)");
+    if (analog_function == "Touchscreen and C-Stick/Gyro (Toggle)") {
+        LibRetro::settings.analog_function = LibRetro::CStickFunction::Toggle;
+    } else if (analog_function == "Touchscreen and C-Stick/Gyro") {
         LibRetro::settings.analog_function = LibRetro::CStickFunction::Both;
-    } else if (analog_function == "C-Stick") {
+    } else if (analog_function == "C-Stick/Gyro") {
         LibRetro::settings.analog_function = LibRetro::CStickFunction::CStick;
-    } else if (analog_function == "Touchscreen Pointer") {
+    } else if (analog_function == "Touchscreen") {
         LibRetro::settings.analog_function = LibRetro::CStickFunction::Touchscreen;
     } else {
         LOG_ERROR(Frontend, "Unknown right analog function: {}.", analog_function);
         LibRetro::settings.analog_function = LibRetro::CStickFunction::Both;
     }
+
+    LibRetro::settings.analog_cstick_enabled = LibRetro::settings.analog_function == LibRetro::CStickFunction::Both || LibRetro::settings.analog_function == LibRetro::CStickFunction::CStick || (LibRetro::settings.analog_function == LibRetro::CStickFunction::Toggle && LibRetro::settings.analog_toggle == LibRetro::AnalogToggleState::ToggledAlternate);
+    LibRetro::settings.analog_touch_enabled = LibRetro::settings.analog_function == LibRetro::CStickFunction::Both || LibRetro::settings.analog_function == LibRetro::CStickFunction::CStick || (LibRetro::settings.analog_function == LibRetro::CStickFunction::Toggle && LibRetro::settings.analog_toggle == LibRetro::AnalogToggleState::ToggledMain);
 
     auto region = LibRetro::FetchVariable("citra_region_value", "Auto");
     std::map<std::string, int> region_values;
@@ -468,7 +510,7 @@ void UpdateSettings() {
         "button:12,joystick:0,engine:libretro";
     // Citra: ZR = RETRO_DEVICE_ID_JOYPAD_R2 (13)
     Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::ZR] =
-        "button:13,joystick:0,engine:libretro";
+        "button:15,joystick:0,engine:libretro";
     // Citra: HOME = RETRO_DEVICE_ID_JOYPAD_L3 (as per above bindings) (14)
     Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Home] =
         "button:14,joystick:0,engine:libretro";
@@ -476,7 +518,7 @@ void UpdateSettings() {
     // Circle Pad
     Settings::values.current_input_profile.analogs[0] = "axis:0,joystick:0,engine:libretro";
     // C-Stick
-    if (LibRetro::settings.analog_function != LibRetro::CStickFunction::Touchscreen) {
+    if (LibRetro::settings.analog_cstick_enabled) {
         Settings::values.current_input_profile.analogs[1] = "axis:1,joystick:0,engine:libretro";
     } else {
         Settings::values.current_input_profile.analogs[1] = "";
@@ -530,11 +572,39 @@ void retro_run() {
         UpdateSettings();
     }
 
-    // Check if the screen swap button is pressed
+    // retro_log_printf_t log_cb = LibRetro::GetLoggingBackend();
+    // if (log_cb)
+    //     log_cb(RETRO_LOG_INFO, "CStick Enabled: %d, Analog_function: %d, Analog_toggle: %d\n",(LibRetro::settings.cstick_enabled),(LibRetro::settings.analog_function),(LibRetro::settings.analog_toggle));
+
+
+
+    // if (log_cb)
+    //     log_cb(RETRO_LOG_INFO, "Analog_toggle: Log Test, Analog_function: Log Test\n");
+    bool analog_function_btn =
+        !!LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3); //Orginally L3    // Check if the screen swap button is pressed
+    static bool analog_function_btn_state = false;
+    if (LibRetro::settings.analog_function == LibRetro::CStickFunction::Toggle){
+        if (analog_function_btn != analog_function_btn_state) {
+            if (analog_function_btn_state == false){
+                if (LibRetro::settings.analog_toggle == LibRetro::AnalogToggleState::ToggledMain){
+                    LibRetro::settings.analog_toggle = LibRetro::AnalogToggleState::ToggledAlternate;
+                    UpdateSettings();
+                } else if (LibRetro::settings.analog_toggle == LibRetro::AnalogToggleState::ToggledAlternate){
+                    LibRetro::settings.analog_toggle = LibRetro::AnalogToggleState::ToggledMain;
+                    UpdateSettings();
+                }
+            }
+            analog_function_btn_state = analog_function_btn;
+        }
+    }
+
+
+
     static bool screen_swap_btn_state = false;
     static bool screen_swap_toggled = false;
-    bool screen_swap_btn =
-        !!LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3);
+    bool screen_swap_btn = false; //Disable this when enabling swap button
+    // bool screen_swap_btn =
+    //     !!LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3); //Orginally L3
     if (screen_swap_btn != screen_swap_btn_state) {
         if (LibRetro::settings.toggle_swap_screen) {
             if (!screen_swap_btn_state)

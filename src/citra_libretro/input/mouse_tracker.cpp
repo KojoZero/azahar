@@ -5,7 +5,6 @@
 #ifdef ENABLE_OPENGL
 
 #include <cmath>
-
 #include <glad/glad.h>
 
 #include "citra_libretro/core_settings.h"
@@ -70,12 +69,12 @@ MouseTracker::~MouseTracker() {
     vbo.Release();
 }
 
-void MouseTracker::OnMouseMove(int deltaX, int deltaY) {
+void MouseTracker::OnMouseMove(double deltaX, double deltaY) {
     x += deltaX;
     y += deltaY;
 }
 
-void MouseTracker::Restrict(int minX, int minY, int maxX, int maxY) {
+void MouseTracker::Restrict(double minX, double minY, double maxX, double maxY) {
     x = std::min(std::max(minX, x), maxX);
     y = std::min(std::max(minY, y), maxY);
 }
@@ -132,44 +131,97 @@ void MouseTracker::Update(int bufferWidth, int bufferHeight,
         }
     }
 
-    if (LibRetro::settings.analog_function != LibRetro::CStickFunction::CStick) {
+    if (LibRetro::settings.analog_touch_enabled) {
         // Check right analog input
-        state |= LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3);
+        state |= LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2); //Orinally R3
 
         // TODO: Provide config option for ratios here
-        auto widthSpeed = (bottomScreen.GetWidth() / 20.0);
-        auto heightSpeed = (bottomScreen.GetHeight() / 20.0);
+        int maxSpeed = LibRetro::settings.maxspeed;
+        auto widthSpeed = (bottomScreen.GetWidth() / 20.0) * std::pow(1.5,(maxSpeed-5)/5);
+        auto heightSpeed = (bottomScreen.GetHeight() / 20.0) * std::pow(1.5,(maxSpeed-5)/5);
 
         // Use controller movement
-        float controllerX =
-            ((float)LibRetro::CheckInput(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT,
+        double joystickNormX =
+            ((double)LibRetro::CheckInput(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT,
                                          RETRO_DEVICE_ID_ANALOG_X) /
              INT16_MAX);
-        float controllerY =
-            ((float)LibRetro::CheckInput(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT,
+        double joystickNormY =
+            ((double)LibRetro::CheckInput(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT,
                                          RETRO_DEVICE_ID_ANALOG_Y) /
              INT16_MAX);
 
         // Deadzone the controller inputs
-        float smoothedX = std::abs(controllerX);
-        float smoothedY = std::abs(controllerY);
+        double absX = std::abs(joystickNormX);
+        double absY = std::abs(joystickNormY);
+        double deadzone = LibRetro::settings.deadzone;
+        double radialLength = std::min(1.0, std::sqrt((absX*absX)+(absY*absY)));
+        int signX = 0;
+        int signY = 0;
+        double joystickScaledX = 0;
+        double joystickScaledY = 0;
+        double joystickDeflectionX = 0;
+        double joystickDeflectionY = 0;
+        if (radialLength <= deadzone) {
+            joystickScaledX = 0;
+            joystickScaledY = 0;
+        } else {
+            double scaledLength = (radialLength - deadzone) / (1 - deadzone);
+            double scaleFactor = scaledLength/radialLength;
+            if (joystickNormX < 0) {
+                signX = -1;
+            } else {
+                signX = 1;
+            }
+            if (joystickNormY < 0) {
+                signY = -1;
+            } else {
+                signY = 1;
+            }
+            //See joystick deflection after deadzone
+            joystickDeflectionX = absX*scaleFactor; //Gives adjusted joystick deflection after deadzone
+            joystickDeflectionY = absY*scaleFactor;
+            double adjustJoystickRadialLength = std::min(1.0, std::sqrt((joystickDeflectionX*joystickDeflectionX)+(joystickDeflectionY*joystickDeflectionY)));
 
-        if (smoothedX < LibRetro::settings.deadzone) {
-            controllerX = 0;
-        }
-        if (smoothedY < LibRetro::settings.deadzone) {
-            controllerY = 0;
+            //Set these values to adjust the response curve of the joystick
+            double edgeboostdeadzone = LibRetro::settings.edgeboostdeadzone; //This is the radial length at which the boost multiplier starts to apply. From this value to 1.0, the boost multiplier will scale the speed linearly.
+            double preboostratio = LibRetro::settings.preboostratio; //Max speed when joystick is below the edgeboostdeadzone. The Boost multiplier will scale from this speed to the full max width/height speed (1.0)
+            double responsecurve = LibRetro::settings.responsecurve; //responsecurve of the exponential response curve
+            double boostMultiplier = 0.0;
+            if (edgeboostdeadzone == 0.0) {
+                joystickScaledX = signX*std::pow(std::min(1.0,(joystickDeflectionX)),responsecurve); //No edgeboost and no scaling
+                joystickScaledY = signY*std::pow(std::min(1.0,(joystickDeflectionY)),responsecurve);
+            } else {
+                double adjustedScaleFactor = 1.0/edgeboostdeadzone;
+                if (adjustJoystickRadialLength >= edgeboostdeadzone) {
+                    boostMultiplier = preboostratio+((1-preboostratio)*((adjustJoystickRadialLength-edgeboostdeadzone)/(1- edgeboostdeadzone))); //Boost multiplier scales linearly once the radialjoystick deflection is greater than 0.9
+                    joystickScaledX = signX*std::pow(std::min(1.0,((joystickDeflectionX)*adjustedScaleFactor)),responsecurve)*boostMultiplier;
+                    joystickScaledY = signY*std::pow(std::min(1.0,((joystickDeflectionY)*adjustedScaleFactor)),responsecurve)*boostMultiplier;
+                } else {
+                    joystickScaledX = signX*std::pow(std::min(1.0,((joystickDeflectionX)*adjustedScaleFactor)),responsecurve)*preboostratio; //divide deflection by 0.9 to full range between 0 and 0.9 deflection. Then Multiply by preboostratio so max deflection below 0.9 gives a max speed of specified fraction
+                    joystickScaledY = signY*std::pow(std::min(1.0,((joystickDeflectionY)*adjustedScaleFactor)),responsecurve)*preboostratio;
+                }
+            }
+            //LOG THE FOLLOWING: joystickNormX, joystickNormY, joystickDeflectionX, joystickDeflectionY, adjustJoystickRadialLength, edgeboostdeadzone, adjustedScaleFactor, boostMultipler, joystickScaledX, joystickScaledY
+            // if (log_cb)
+            //     log_cb(RETRO_LOG_INFO, "Joystick Norm X: %f, Joystick Norm Y: %f, Joystick Deflection X: %f, Joystick Deflection Y: %f, Adjusted Joystick Radial Length: %f, Boost Multiplier Deadzone: %f, Adjusted Scale Factor: %f, Boost Multiplier: %f, Joystick Scaled X: %f, Joystick Scaled Y: %f\n",
+            //     joystickNormX, joystickNormY, joystickDeflectionX, joystickDeflectionY,
+            //     adjustJoystickRadialLength, edgeboostdeadzone, adjustedScaleFactor,
+            //     boostMultiplier, joystickScaledX, joystickScaledY);
+            // retro_log_printf_t log_cb = GetLoggingBackend();
+            // if (log_cb)
+            //     log_cb(RETRO_LOG_INFO, "Deadzone: %f, Edge Boost Deadzone: %f, Pre-Boost Ratio: %f, Response Curve: %f, Max Speed: %d\n", deadzone, edgeboostdeadzone, preboostratio, responsecurve, maxSpeed);
+
         }
 
-        OnMouseMove(static_cast<int>(controllerX * widthSpeed),
-                    static_cast<int>(controllerY * heightSpeed));
+        OnMouseMove(static_cast<double>(joystickScaledX * heightSpeed),
+                    static_cast<double>(joystickScaledY * heightSpeed));
     }
 
-    Restrict(0, 0, bottomScreen.GetWidth(), bottomScreen.GetHeight());
+    Restrict(0, 0, bottomScreen.GetWidth()-1.0, bottomScreen.GetHeight()-1.0);
 
     // Make the coordinates 0 -> 1
-    projectedX = (float)x / bottomScreen.GetWidth();
-    projectedY = (float)y / bottomScreen.GetHeight();
+    projectedX = static_cast<float>(static_cast<int>(x)) / bottomScreen.GetWidth();
+    projectedY = static_cast<float>(static_cast<int>(y)) / bottomScreen.GetHeight();
 
     // Ensure that the projected position doesn't overlap outside the bottom screen framebuffer.
     // TODO: Provide config option
