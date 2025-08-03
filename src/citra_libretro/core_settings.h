@@ -32,6 +32,10 @@ struct CoreSettings {
 
     LibRetro::AnalogToggleState analog_toggle;
 
+    bool swap_screen_state;
+
+    bool inverted_swap_screen_state;
+
     bool analog_cstick_enabled;
 
     bool analog_touch_enabled;

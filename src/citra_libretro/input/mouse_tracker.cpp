@@ -137,8 +137,8 @@ void MouseTracker::Update(int bufferWidth, int bufferHeight,
 
         // TODO: Provide config option for ratios here
         int maxSpeed = LibRetro::settings.maxspeed;
-        auto widthSpeed = (bottomScreen.GetWidth() / 20.0) * std::pow(1.5,(maxSpeed-5)/5);
-        auto heightSpeed = (bottomScreen.GetHeight() / 20.0) * std::pow(1.5,(maxSpeed-5)/5);
+        auto widthSpeed = (bottomScreen.GetWidth() / 20.0) * std::pow(2.0,(maxSpeed-5.0)/5.0);
+        auto heightSpeed = (bottomScreen.GetHeight() / 20.0) * std::pow(2.0,(maxSpeed-5.0)/5.0);
 
         // Use controller movement
         double joystickNormX =
@@ -201,15 +201,9 @@ void MouseTracker::Update(int bufferWidth, int bufferHeight,
                     joystickScaledY = signY*std::pow(std::min(1.0,((joystickDeflectionY)*adjustedScaleFactor)),responsecurve)*preboostratio;
                 }
             }
-            //LOG THE FOLLOWING: joystickNormX, joystickNormY, joystickDeflectionX, joystickDeflectionY, adjustJoystickRadialLength, edgeboostdeadzone, adjustedScaleFactor, boostMultipler, joystickScaledX, joystickScaledY
-            // if (log_cb)
-            //     log_cb(RETRO_LOG_INFO, "Joystick Norm X: %f, Joystick Norm Y: %f, Joystick Deflection X: %f, Joystick Deflection Y: %f, Adjusted Joystick Radial Length: %f, Boost Multiplier Deadzone: %f, Adjusted Scale Factor: %f, Boost Multiplier: %f, Joystick Scaled X: %f, Joystick Scaled Y: %f\n",
-            //     joystickNormX, joystickNormY, joystickDeflectionX, joystickDeflectionY,
-            //     adjustJoystickRadialLength, edgeboostdeadzone, adjustedScaleFactor,
-            //     boostMultiplier, joystickScaledX, joystickScaledY);
-            // retro_log_printf_t log_cb = GetLoggingBackend();
-            // if (log_cb)
-            //     log_cb(RETRO_LOG_INFO, "Deadzone: %f, Edge Boost Deadzone: %f, Pre-Boost Ratio: %f, Response Curve: %f, Max Speed: %d\n", deadzone, edgeboostdeadzone, preboostratio, responsecurve, maxSpeed);
+            retro_log_printf_t log_cb = GetLoggingBackend();
+            if (log_cb)
+                log_cb(RETRO_LOG_INFO, "Deadzone: %f, Edge Boost Deadzone: %f, Pre-Boost Ratio: %f, Response Curve: %f, Max Speed: %d\n", deadzone, edgeboostdeadzone, preboostratio, responsecurve, maxSpeed);
 
         }
 
