@@ -24,6 +24,7 @@ enum class InputType : u32 {
     Static = 2,
     Cubeb = 3,
     OpenAL = 4,
+    LibRetro = 5,
 };
 
 struct InputDetails {

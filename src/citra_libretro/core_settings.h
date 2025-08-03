@@ -31,4 +31,7 @@ struct CoreSettings {
 
 } extern settings;
 
+void RegisterCoreOptions(void);
+void ParseCoreOptions(void);
+
 } // namespace LibRetro
