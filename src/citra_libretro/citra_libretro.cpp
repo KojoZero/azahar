@@ -394,9 +394,9 @@ void UpdateSettings() {
 
     auto edgeboostdeadzone = LibRetro::FetchVariable("citra_edgeboostdeadzone", "99");
     if (edgeboostdeadzone == "OFF") {
-        LibRetro::settings.edgeboostdeadzone = 0.0;
+        LibRetro::settings.edgeboostdeadzone = 0;
     } else {
-        LibRetro::settings.edgeboostdeadzone = (double)std::stoi(edgeboostdeadzone) / 100;
+        LibRetro::settings.edgeboostdeadzone = (float)std::stoi(edgeboostdeadzone) / 100;
     }
 
     auto preboostratio = LibRetro::FetchVariable("citra_preboostratio", "0.5");

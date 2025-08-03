@@ -22,11 +22,11 @@ struct CoreSettings {
 
     int maxspeed;
 
-    double responsecurve;
+    float responsecurve;
 
-    double edgeboostdeadzone;
+    float edgeboostdeadzone;
 
-    double preboostratio;
+    float preboostratio;
 
     LibRetro::CStickFunction analog_function;
 

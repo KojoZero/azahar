@@ -22,10 +22,10 @@ public:
     ~MouseTracker();
 
     /// Called whenever a mouse moves.
-    void OnMouseMove(double xDelta, double yDelta);
+    void OnMouseMove(float xDelta, float yDelta);
 
     /// Restricts the mouse cursor to a specified rectangle.
-    void Restrict(double minX, double minY, double maxX, double maxY);
+    void Restrict(float minX, float minY, float maxX, float maxY);
 
     /// Updates the tracker.
     void Update(int bufferWidth, int bufferHeight, Common::Rectangle<unsigned> bottomScreen);
@@ -45,8 +45,8 @@ public:
     }
 
 private:
-    double x;
-    double y;
+    float x;
+    float y;
 
     float lastMouseX;
     float lastMouseY;
