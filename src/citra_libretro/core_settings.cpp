@@ -15,69 +15,70 @@ CoreSettings settings = {};
 
 namespace config {
 
-static constexpr const char *enabled = "enabled";
-static constexpr const char *disabled = "disabled";
+static constexpr const char* enabled = "enabled";
+static constexpr const char* disabled = "disabled";
 
 namespace category {
-static constexpr const char *cpu = "cpu";
-static constexpr const char *system = "system";
-static constexpr const char *audio = "audio";
-static constexpr const char *graphics = "graphics";
-static constexpr const char *layout = "layout";
-static constexpr const char *storage = "storage";
-static constexpr const char *input = "input";
-}
+static constexpr const char* cpu = "cpu";
+static constexpr const char* system = "system";
+static constexpr const char* audio = "audio";
+static constexpr const char* graphics = "graphics";
+static constexpr const char* layout = "layout";
+static constexpr const char* storage = "storage";
+static constexpr const char* input = "input";
+} // namespace category
 
 namespace cpu {
-static constexpr const char *use_cpu_jit = "citra_use_cpu_jit";
-static constexpr const char *cpu_clock_percentage = "citra_cpu_scale";
-}
+static constexpr const char* use_cpu_jit = "citra_use_cpu_jit";
+static constexpr const char* cpu_clock_percentage = "citra_cpu_scale";
+} // namespace cpu
 
 namespace system {
-static constexpr const char *is_new_3ds = "citra_is_new_3ds";
-static constexpr const char *region = "citra_region_value";
-static constexpr const char *language = "citra_language";
-}
+static constexpr const char* is_new_3ds = "citra_is_new_3ds";
+static constexpr const char* region = "citra_region_value";
+static constexpr const char* language = "citra_language";
+} // namespace system
 
 namespace audio {
-static constexpr const char *audio_emulation = "citra_audio_emulation";
-static constexpr const char *input_type = "citra_input_type";
-}
+static constexpr const char* audio_emulation = "citra_audio_emulation";
+static constexpr const char* input_type = "citra_input_type";
+} // namespace audio
 
 namespace graphics {
-static constexpr const char *graphics_api = "citra_graphics_api";
-static constexpr const char *use_hw_shader = "citra_use_hw_shaders";
-static constexpr const char *use_shader_jit = "citra_use_shader_jit";
-static constexpr const char *shaders_accurate_mul = "citra_use_acc_mul";
-static constexpr const char *use_disk_shader_cache = "citra_use_hw_shader_cache";
-static constexpr const char *resolution_factor = "citra_resolution_factor";
-static constexpr const char *texture_filter = "citra_texture_filter";
-static constexpr const char *texture_sampling = "citra_texture_sampling";
-static constexpr const char *custom_textures = "citra_custom_textures";
-static constexpr const char *dump_textures = "citra_dump_textures";
-}
+static constexpr const char* graphics_api = "citra_graphics_api";
+static constexpr const char* use_hw_shader = "citra_use_hw_shaders";
+static constexpr const char* use_shader_jit = "citra_use_shader_jit";
+static constexpr const char* shaders_accurate_mul = "citra_use_acc_mul";
+static constexpr const char* use_disk_shader_cache = "citra_use_hw_shader_cache";
+static constexpr const char* resolution_factor = "citra_resolution_factor";
+static constexpr const char* texture_filter = "citra_texture_filter";
+static constexpr const char* texture_sampling = "citra_texture_sampling";
+static constexpr const char* custom_textures = "citra_custom_textures";
+static constexpr const char* dump_textures = "citra_dump_textures";
+} // namespace graphics
 
 namespace layout {
-static constexpr const char *layout_option = "citra_layout_option";
-static constexpr const char *swap_screen = "citra_swap_screen";
-static constexpr const char *toggle_swap_screen = "citra_swap_screen_mode";
-}
+static constexpr const char* layout_option = "citra_layout_option";
+static constexpr const char* swap_screen = "citra_swap_screen";
+static constexpr const char* toggle_swap_screen = "citra_swap_screen_mode";
+} // namespace layout
 
 namespace storage {
-static constexpr const char *use_virtual_sd = "citra_use_virtual_sd";
-static constexpr const char *use_libretro_save_path = "citra_use_libretro_save_path";
-}
+static constexpr const char* use_virtual_sd = "citra_use_virtual_sd";
+static constexpr const char* use_libretro_save_path = "citra_use_libretro_save_path";
+} // namespace storage
 
 namespace input {
-static constexpr const char *analog_function = "citra_analog_function";
-static constexpr const char *deadzone = "citra_deadzone";
-static constexpr const char *mouse_touchscreen = "citra_mouse_touchscreen";
-static constexpr const char *touch_touchscreen = "citra_touch_touchscreen";
-static constexpr const char *render_touchscreen = "citra_render_touchscreen";
-}
+static constexpr const char* analog_function = "citra_analog_function";
+static constexpr const char* deadzone = "citra_deadzone";
+static constexpr const char* mouse_touchscreen = "citra_mouse_touchscreen";
+static constexpr const char* touch_touchscreen = "citra_touch_touchscreen";
+static constexpr const char* render_touchscreen = "citra_render_touchscreen";
+} // namespace input
 
-}
+} // namespace config
 
+// clang-format off
 static constexpr retro_core_option_v2_category option_categories[] = {
     {
         config::category::cpu,
@@ -575,14 +576,13 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
     // Terminator
     { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, { { nullptr, nullptr } }, nullptr }
 };
+// clang-format on
 
 static const retro_core_options_v2 options_v2 = {
     const_cast<retro_core_option_v2_category*>(option_categories),
-    const_cast<retro_core_option_v2_definition*>(option_definitions)
-};
+    const_cast<retro_core_option_v2_definition*>(option_definitions)};
 
-void RegisterCoreOptions(void)
-{
+void RegisterCoreOptions(void) {
     // Try v2 first, then fallback to v1 and v0 if needed
     unsigned version = 0;
     if (!LibRetro::GetCoreOptionsVersion(&version)) {
@@ -685,8 +685,7 @@ void RegisterCoreOptions(void)
     }
 }
 
-static void ParseCpuOptions(void)
-{
+static void ParseCpuOptions(void) {
     Settings::values.use_cpu_jit =
         LibRetro::FetchVariable(config::cpu::use_cpu_jit, config::enabled) == config::enabled;
 #if defined(IOS)
@@ -699,33 +698,50 @@ static void ParseCpuOptions(void)
 }
 
 static int GetRegionValue(const std::string& name) {
-    if (name == "Japan") return 0;
-    if (name == "USA") return 1;
-    if (name == "Europe") return 2;
-    if (name == "Australia") return 3;
-    if (name == "China") return 4;
-    if (name == "Korea") return 5;
-    if (name == "Taiwan") return 6;
+    if (name == "Japan")
+        return 0;
+    if (name == "USA")
+        return 1;
+    if (name == "Europe")
+        return 2;
+    if (name == "Australia")
+        return 3;
+    if (name == "China")
+        return 4;
+    if (name == "Korea")
+        return 5;
+    if (name == "Taiwan")
+        return 6;
     return -1; // Auto
 }
 
 static Service::CFG::SystemLanguage GetLanguageValue(const std::string& name) {
-    if (name == "Japanese") return Service::CFG::LANGUAGE_JP;
-    if (name == "French") return Service::CFG::LANGUAGE_FR;
-    if (name == "Spanish") return Service::CFG::LANGUAGE_ES;
-    if (name == "German") return Service::CFG::LANGUAGE_DE;
-    if (name == "Italian") return Service::CFG::LANGUAGE_IT;
-    if (name == "Dutch") return Service::CFG::LANGUAGE_NL;
-    if (name == "Portuguese") return Service::CFG::LANGUAGE_PT;
-    if (name == "Russian") return Service::CFG::LANGUAGE_RU;
-    if (name == "Korean") return Service::CFG::LANGUAGE_KO;
-    if (name == "Traditional Chinese") return Service::CFG::LANGUAGE_TW;
-    if (name == "Simplified Chinese") return Service::CFG::LANGUAGE_ZH;
+    if (name == "Japanese")
+        return Service::CFG::LANGUAGE_JP;
+    if (name == "French")
+        return Service::CFG::LANGUAGE_FR;
+    if (name == "Spanish")
+        return Service::CFG::LANGUAGE_ES;
+    if (name == "German")
+        return Service::CFG::LANGUAGE_DE;
+    if (name == "Italian")
+        return Service::CFG::LANGUAGE_IT;
+    if (name == "Dutch")
+        return Service::CFG::LANGUAGE_NL;
+    if (name == "Portuguese")
+        return Service::CFG::LANGUAGE_PT;
+    if (name == "Russian")
+        return Service::CFG::LANGUAGE_RU;
+    if (name == "Korean")
+        return Service::CFG::LANGUAGE_KO;
+    if (name == "Traditional Chinese")
+        return Service::CFG::LANGUAGE_TW;
+    if (name == "Simplified Chinese")
+        return Service::CFG::LANGUAGE_ZH;
     return Service::CFG::LANGUAGE_EN; // English default
 }
 
-static void ParseSystemOptions(void)
-{
+static void ParseSystemOptions(void) {
     Settings::values.is_new_3ds =
         LibRetro::FetchVariable(config::system::is_new_3ds, "Old 3DS") == "New 3DS";
 
@@ -737,13 +753,14 @@ static void ParseSystemOptions(void)
 }
 
 static Settings::AudioEmulation GetAudioEmulation(const std::string& name) {
-    if (name == "lle") return Settings::AudioEmulation::LLE;
-    if (name == "lle_multithread") return Settings::AudioEmulation::LLEMultithreaded;
+    if (name == "lle")
+        return Settings::AudioEmulation::LLE;
+    if (name == "lle_multithread")
+        return Settings::AudioEmulation::LLEMultithreaded;
     return Settings::AudioEmulation::HLE; // Default
 }
 
-static void ParseAudioOptions(void)
-{
+static void ParseAudioOptions(void) {
     Settings::values.audio_emulation =
         GetAudioEmulation(LibRetro::FetchVariable(config::audio::audio_emulation, "hle"));
 
@@ -798,22 +815,23 @@ static Settings::GraphicsAPI GetGraphicsAPI(const std::string& name) {
     return LibRetro::GetPreferredRenderer();
 }
 
-static void ParseGraphicsOptions(void)
-{
+static void ParseGraphicsOptions(void) {
     Settings::values.graphics_api =
         GetGraphicsAPI(LibRetro::FetchVariable(config::graphics::graphics_api, "auto"));
 
-    Settings::values.use_hw_shader =
-        LibRetro::FetchVariable(config::graphics::use_hw_shader, config::enabled) == config::enabled;
+    Settings::values.use_hw_shader = LibRetro::FetchVariable(config::graphics::use_hw_shader,
+                                                             config::enabled) == config::enabled;
 
-    Settings::values.use_shader_jit =
-        LibRetro::FetchVariable(config::graphics::use_shader_jit, config::enabled) == config::enabled;
+    Settings::values.use_shader_jit = LibRetro::FetchVariable(config::graphics::use_shader_jit,
+                                                              config::enabled) == config::enabled;
 
     Settings::values.shaders_accurate_mul =
-        LibRetro::FetchVariable(config::graphics::shaders_accurate_mul, config::enabled) == config::enabled;
+        LibRetro::FetchVariable(config::graphics::shaders_accurate_mul, config::enabled) ==
+        config::enabled;
 
     Settings::values.use_disk_shader_cache =
-        LibRetro::FetchVariable(config::graphics::use_disk_shader_cache, config::enabled) == config::enabled;
+        LibRetro::FetchVariable(config::graphics::use_disk_shader_cache, config::enabled) ==
+        config::enabled;
 
     auto resolution = LibRetro::FetchVariable(config::graphics::resolution_factor, "1");
     Settings::values.resolution_factor = std::stoi(resolution);
@@ -821,14 +839,14 @@ static void ParseGraphicsOptions(void)
     Settings::values.texture_filter =
         GetTextureFilter(LibRetro::FetchVariable(config::graphics::texture_filter, "none"));
 
-    Settings::values.texture_sampling =
-        GetTextureSampling(LibRetro::FetchVariable(config::graphics::texture_sampling, "GameControlled"));
+    Settings::values.texture_sampling = GetTextureSampling(
+        LibRetro::FetchVariable(config::graphics::texture_sampling, "GameControlled"));
 
-    Settings::values.custom_textures =
-        LibRetro::FetchVariable(config::graphics::custom_textures, config::disabled) == config::enabled;
+    Settings::values.custom_textures = LibRetro::FetchVariable(config::graphics::custom_textures,
+                                                               config::disabled) == config::enabled;
 
-    Settings::values.dump_textures =
-        LibRetro::FetchVariable(config::graphics::dump_textures, config::disabled) == config::enabled;
+    Settings::values.dump_textures = LibRetro::FetchVariable(config::graphics::dump_textures,
+                                                             config::disabled) == config::enabled;
 }
 
 static Settings::LayoutOption GetLayoutOption(const std::string& name) {
@@ -841,8 +859,7 @@ static Settings::LayoutOption GetLayoutOption(const std::string& name) {
     return Settings::LayoutOption::Default;
 }
 
-static void ParseLayoutOptions(void)
-{
+static void ParseLayoutOptions(void) {
     Settings::values.layout_option =
         GetLayoutOption(LibRetro::FetchVariable(config::layout::layout_option, "default"));
 
@@ -853,10 +870,9 @@ static void ParseLayoutOptions(void)
         LibRetro::FetchVariable(config::layout::toggle_swap_screen, "Toggle") == "Toggle";
 }
 
-static void ParseStorageOptions(void)
-{
-    Settings::values.use_virtual_sd =
-        LibRetro::FetchVariable(config::storage::use_virtual_sd, config::enabled) == config::enabled;
+static void ParseStorageOptions(void) {
+    Settings::values.use_virtual_sd = LibRetro::FetchVariable(config::storage::use_virtual_sd,
+                                                              config::enabled) == config::enabled;
 
     // Configure the file storage location
     auto use_libretro_saves = LibRetro::FetchVariable(config::storage::use_libretro_save_path,
@@ -896,10 +912,9 @@ static LibRetro::CStickFunction GetAnalogFunction(const std::string& name) {
     return LibRetro::CStickFunction::Both; // Default
 }
 
-static void ParseInputOptions(void)
-{
-    LibRetro::settings.analog_function =
-        GetAnalogFunction(LibRetro::FetchVariable(config::input::analog_function, "c_stick_and_touchscreen"));
+static void ParseInputOptions(void) {
+    LibRetro::settings.analog_function = GetAnalogFunction(
+        LibRetro::FetchVariable(config::input::analog_function, "c_stick_and_touchscreen"));
 
     if (LibRetro::settings.analog_function != LibRetro::CStickFunction::Touchscreen) {
         Settings::values.current_input_profile.analogs[1] = "axis:1,joystick:0,engine:libretro";
@@ -911,17 +926,19 @@ static void ParseInputOptions(void)
     LibRetro::settings.deadzone = static_cast<float>(std::stoi(deadzone)) / 100.0f;
 
     LibRetro::settings.mouse_touchscreen =
-        LibRetro::FetchVariable(config::input::mouse_touchscreen, config::enabled) == config::enabled;
+        LibRetro::FetchVariable(config::input::mouse_touchscreen, config::enabled) ==
+        config::enabled;
 
     LibRetro::settings.touch_touchscreen =
-        LibRetro::FetchVariable(config::input::touch_touchscreen, config::disabled) == config::enabled;
+        LibRetro::FetchVariable(config::input::touch_touchscreen, config::disabled) ==
+        config::enabled;
 
     LibRetro::settings.render_touchscreen =
-        LibRetro::FetchVariable(config::input::render_touchscreen, config::disabled) == config::enabled;
+        LibRetro::FetchVariable(config::input::render_touchscreen, config::disabled) ==
+        config::enabled;
 }
 
-void ParseCoreOptions(void)
-{
+void ParseCoreOptions(void) {
     // Override default values that aren't user-selectable and aren't correct for the core
     Settings::values.enable_audio_stretching = false;
     Settings::values.frame_limit = 10000;
