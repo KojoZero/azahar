@@ -154,11 +154,10 @@ void LibRetro::OnConfigureEnvironment() {
         {"citra_swap_screen_mode", "Swap Screen Mode; Toggle|Hold"},
         {"citra_analog_function",
          "Right analog function; Touchscreen and C-Stick (Toggle)|Touchscreen and C-Stick|Touchscreen|C-Stick"},
-        {"citra_deadzone", "Joystick pointer deadzone (%); 10|OFF|5|15|20|25|30|35"},
-        {"citra_maxspeed", "Joystick pointer max speed; 5|0|1|2|3|4|6|7|8|9|10"},
-        {"citra_responsecurve", "Joystick pointer response curve; 1.5|1|2"},
-        {"citra_edgeboostdeadzone", "Joystick pointer boost deadzone (%) (OFF disables boost); 99|OFF|90|95"},
-        {"citra_preboostratio", "Joystick pointer pre-boost ratio (only applies if boost is enabled); 0.5|0.3|0.4|0.6|0.7"},
+        {"citra_deadzone", "Joystick pointer deadzone (%); 5|OFF|10|15|20|25|30|35"},
+        {"citra_maxspeed", "Joystick pointer max speed; 4|1|2|3|5|6|7|8|9"},
+        {"citra_responsecurve", "Joystick pointer response curve; 2|1|3"},
+        {"citra_speedupratio", "Joystick pointer speedup ratio; 1.5|2"},
         {"citra_touchscreen", "Enable touchscreen; disabled|enabled"},
         {"citra_touchscreen_pointer",
          "Use touchscreen pointer; disabled|enabled (experimental)"},
@@ -241,9 +240,9 @@ void UpdateSettings() {
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, "B"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, "A"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L, "L"},
-        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2, "-- / ZL"},
+        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2, "Speedup Pointer / ZL"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R, "R"},
-        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, "Touchscreen Touch / ZR"},
+        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, "Touch Touchscreen / ZR"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "Toggle Touchscreen and C-Stick Mode"},
@@ -378,29 +377,21 @@ void UpdateSettings() {
         Settings::values.layout_option = Settings::LayoutOption::Default;
     }
 
-    auto deadzone = LibRetro::FetchVariable("citra_deadzone", "10");
+    auto deadzone = LibRetro::FetchVariable("citra_deadzone", "5");
     if (deadzone == "OFF"){
         LibRetro::settings.deadzone = 0;
     } else {
         LibRetro::settings.deadzone = (float)std::stoi(deadzone) / 100;
     }
 
-    auto maxspeed = LibRetro::FetchVariable("citra_maxspeed", "5");
+    auto maxspeed = LibRetro::FetchVariable("citra_maxspeed", "4");
     LibRetro::settings.maxspeed = std::stoi(maxspeed);
 
-    auto responsecurve = LibRetro::FetchVariable("citra_responsecurve", "1.5");
+    auto responsecurve = LibRetro::FetchVariable("citra_responsecurve", "2");
     LibRetro::settings.responsecurve = std::stod(responsecurve);
 
-
-    auto edgeboostdeadzone = LibRetro::FetchVariable("citra_edgeboostdeadzone", "99");
-    if (edgeboostdeadzone == "OFF") {
-        LibRetro::settings.edgeboostdeadzone = 0;
-    } else {
-        LibRetro::settings.edgeboostdeadzone = (float)std::stoi(edgeboostdeadzone) / 100;
-    }
-
-    auto preboostratio = LibRetro::FetchVariable("citra_preboostratio", "0.5");
-    LibRetro::settings.preboostratio = std::stod(preboostratio);
+    auto speedupratio = LibRetro::FetchVariable("citra_speedupratio", "1.5");
+    LibRetro::settings.speedupratio = std::stod(speedupratio);
 
     auto analog_function =
         LibRetro::FetchVariable("citra_analog_function", "Touchscreen and C-Stick (Toggle)");
@@ -612,6 +603,19 @@ void retro_run() {
         }
     }
 
+    if (LibRetro::settings.analog_touch_enabled){
+        bool speedup_btn = !!LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2);
+        if (speedup_btn){
+            if (LibRetro::settings.speedup_enabled != true){
+                LibRetro::settings.speedup_enabled = true;
+            }
+        } else {
+            if (LibRetro::settings.speedup_enabled != false){
+                LibRetro::settings.speedup_enabled = false;
+            }
+        }
+
+    }
 
 
     static bool screen_swap_btn_state = false;
@@ -625,19 +629,27 @@ void retro_run() {
                 screen_swap_toggled = !screen_swap_toggled;
 
             if (screen_swap_toggled){
-                LibRetro::settings.swap_screen_state = true;
-                UpdateSettings();
+                if (LibRetro::settings.swap_screen_state != true) {
+                    LibRetro::settings.swap_screen_state = true;
+                    UpdateSettings();
+                }
             } else {
-                LibRetro::settings.swap_screen_state = false;
-                UpdateSettings();
+                if (LibRetro::settings.swap_screen_state != false) {
+                    LibRetro::settings.swap_screen_state = false;
+                    UpdateSettings();
+                }
             }
         } else {
             if (screen_swap_btn){
-                LibRetro::settings.swap_screen_state = true;
-                UpdateSettings();
+                if (LibRetro::settings.swap_screen_state != true) {
+                    LibRetro::settings.swap_screen_state = true;
+                    UpdateSettings();
+                }
             } else {
-                LibRetro::settings.swap_screen_state = false;
-                UpdateSettings();
+                if (LibRetro::settings.swap_screen_state != false) {
+                    LibRetro::settings.swap_screen_state = false;
+                    UpdateSettings();
+                }
             }
         }
 

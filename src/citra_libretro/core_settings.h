@@ -24,9 +24,9 @@ struct CoreSettings {
 
     float responsecurve;
 
-    float edgeboostdeadzone;
+    float speedupratio;
 
-    float preboostratio;
+    bool speedup_enabled;
 
     LibRetro::CStickFunction analog_function;
 
