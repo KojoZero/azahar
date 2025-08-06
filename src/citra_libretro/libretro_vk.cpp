@@ -217,16 +217,38 @@ void LibRetroVKInstance::DetectDeviceCapabilities() {
     // Query extended features if available
     vk::PhysicalDeviceFeatures2 features2;
     vk::PhysicalDeviceTimelineSemaphoreFeatures timeline_features;
+    vk::PhysicalDeviceVulkan12Features vulkan12_features;
+
+    // Chain the feature structures
+    void* pNext = nullptr;
+
+    // Check for layered rendering support on MoltenVK (maps to shaderOutputLayer)
+    if (driver_id == vk::DriverIdKHR::eMoltenvk) {
+        vulkan12_features.pNext = pNext;
+        pNext = &vulkan12_features;
+    }
 
     if (timeline_semaphores) {
-        features2.pNext = &timeline_features;
-        timeline_features.pNext = nullptr;
+        timeline_features.pNext = pNext;
+        pNext = &timeline_features;
     }
+
+    features2.pNext = pNext;
 
     try {
         physical_device.getFeatures2(&features2);
         if (timeline_semaphores) {
             timeline_semaphores = timeline_features.timelineSemaphore;
+        }
+
+        // Check layered rendering support on MoltenVK
+        // MoltenVK maps _metalFeatures.layeredRendering to _vulkan12FeaturesNoExt.shaderOutputLayer
+        if (driver_id == vk::DriverIdKHR::eMoltenvk) {
+            if (!vulkan12_features.shaderOutputLayer) {
+                LOG_INFO(Render_Vulkan,
+                         "Disabling layered rendering (shaderOutputLayer not supported by device)");
+                layered_rendering_supported = false;
+            }
         }
     } catch (const vk::SystemError& e) {
         LOG_WARNING(Render_Vulkan, "Failed to query extended features: {}", e.what());

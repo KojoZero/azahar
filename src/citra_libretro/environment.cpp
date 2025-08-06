@@ -84,6 +84,18 @@ bool SetVariables(const retro_variable vars[]) {
     return environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)vars);
 }
 
+bool SetCoreOptionsV2(const retro_core_options_v2* options) {
+    return environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2, (void*)options);
+}
+
+bool SetCoreOptionsV1(const retro_core_option_definition* options) {
+    return environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS, (void*)options);
+}
+
+bool GetCoreOptionsVersion(unsigned* version) {
+    return environ_cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, version);
+}
+
 bool SetControllerInfo(const retro_controller_info info[]) {
     return environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)info);
 }
@@ -186,6 +198,13 @@ int16_t CheckInput(unsigned port, unsigned device, unsigned index, unsigned id) 
 void SetVFSCallback(struct retro_vfs_interface_info* vfs_iface_info) {
     if (environ_cb(RETRO_ENVIRONMENT_GET_VFS_INTERFACE, vfs_iface_info))
         filestream_vfs_init(vfs_iface_info);
+}
+#endif
+
+#ifdef IOS
+bool CanUseJIT() {
+    bool can_jit = false;
+    return environ_cb(RETRO_ENVIRONMENT_GET_JIT_CAPABLE, &can_jit) && can_jit;
 }
 #endif
 

@@ -5,7 +5,6 @@
 #include <list>
 #include <numeric>
 #include <vector>
-#include <common/file_util.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -64,7 +63,7 @@ void retro_init() {
     Common::Log::LibRetroStart(LibRetro::GetLoggingBackend());
     Common::Log::SetGlobalFilter(emu_instance->log_filter);
 
-    LOG_DEBUG(Frontend, "Initialising core...");
+    LOG_DEBUG(Frontend, "Initializing core...");
 
     // Set up LLE cores
     for (const auto& service_module : Service::service_module_map) {
@@ -105,86 +104,7 @@ void LibRetro::OnConfigureEnvironment() {
     LibRetro::SetVFSCallback(&vfs_iface_info);
 #endif
 
-    std::string cpuScale = "CPU Clock scale; ";
-    static const int MAX_CPU_SCALE = 400;
-    static const int MIN_CPU_SCALE = 5;
-    static const int DEFAULT_CPU_SCALE = 100;
-
-    cpuScale.append(std::to_string(DEFAULT_CPU_SCALE) + "% (Default)|");
-
-    for (int i = MIN_CPU_SCALE; i <= MAX_CPU_SCALE; i += 5) {
-        if (i == DEFAULT_CPU_SCALE)
-            continue;
-
-        cpuScale.append(std::to_string(i) + "%");
-
-        if (i != MAX_CPU_SCALE)
-            cpuScale.append("|");
-    }
-
-    retro_variable values[] = {
-        {"citra_graphics_api", "Graphics API; Auto"
-#ifdef ENABLE_VULKAN
-                               "|Vulkan"
-#endif
-#ifdef ENABLE_OPENGL
-                               "|OpenGL"
-#endif
-                               "|Software"},
-        {"citra_use_cpu_jit", "Enable CPU JIT; enabled|disabled"},
-        {"citra_cpu_scale", cpuScale.c_str()},
-        {"citra_use_shader_jit", "Enable shader JIT; enabled|disabled"},
-        {"citra_use_hw_shaders", "Enable hardware shaders; enabled|disabled"},
-        {"citra_use_hw_shader_cache", "Save hardware shader cache to disk; enabled|disabled"},
-        {"citra_use_acc_geo_shaders",
-         "Enable accurate geometry shaders (only for H/W shaders); enabled|disabled"},
-        {"citra_use_acc_mul",
-         "Enable accurate shaders multiplication (only for H/W shaders); enabled|disabled"},
-        {"citra_texture_filter",
-         "Texture filter type; none|Anime4K Ultrafast|Bicubic|NearestNeighbor|ScaleForce|xBRZ "
-         "freescale|MMPX"},
-        {"citra_texture_sampling", "Texture sampling type; GameControlled|NearestNeighbor|Linear"},
-        {"citra_custom_textures", "Enable custom textures; disabled|enabled"},
-        {"citra_dump_textures", "Dump textures; disabled|enabled"},
-        {"citra_resolution_factor",
-         "Resolution scale factor; 1x (Native)|2x|3x|4x|5x|6x|7x|8x|9x|10x"},
-        {"citra_layout_option", "Screen layout positioning; Default Top-Bottom Screen|Single "
-                                "Screen Only|Large Screen, Small Screen|Side by Side"},
-        {"citra_swap_screen", "Prominent 3DS screen; Top|Bottom"},
-        {"citra_swap_screen_mode", "Swap Screen Mode; Toggle|Hold"},
-        {"citra_analog_function",
-         "Right analog function; Touchscreen and C-Stick (Toggle)|Touchscreen and C-Stick|Touchscreen|C-Stick"},
-        {"citra_deadzone", "Joystick pointer deadzone (%); 5|OFF|10|15|20|25|30|35"},
-        {"citra_maxspeed", "Joystick pointer max speed; 4|1|2|3|5|6|7|8|9"},
-        {"citra_responsecurve", "Joystick pointer response curve; 2|1|3"},
-        {"citra_speedupratio", "Joystick pointer speedup ratio; 1.5|2"},
-        {"citra_touchscreen", "Enable touchscreen; disabled|enabled"},
-        {"citra_touchscreen_pointer",
-         "Use touchscreen pointer; disabled|enabled (experimental)"},
-        {"citra_touchscreen_pointer_speed", "Touchscreen pointer speed; 1x|2x|3x|4x|5x"},
-        {"citra_touchscreen_pointer_sensitivity",
-         "Touchscreen pointer sensitivity; 1x|2x|3x|4x|5x"},
-        {"citra_touchscreen_pointer_acceleration",
-         "Touchscreen pointer acceleration; 0.0|0.1|0.2|0.3|0.4|0.5"},
-        {"citra_enable_emulated_pointer", "Enable emulated pointer; disabled|enabled"},
-        {"citra_enable_mouse_pointer", "Use mouse pointer for touchscreen; disabled|enabled"},
-        {"citra_mouse_touchscreen",
-         "Simulate touchscreen interactions with mouse; enabled|disabled"},
-        {"citra_touch_touchscreen",
-         "Simulate touchscreen interactions with touchscreen; disabled|enabled"},
-        {"citra_render_touchscreen", "Render simulated touchscreen interactions; enabled|disabled"},
-        {"citra_use_virtual_sd", "Enable virtual SD card; enabled|disabled"},
-        {"citra_use_libretro_save_path", "Savegame location; LibRetro Default|Azahar Default"},
-        {"citra_is_new_3ds", "3DS system model; New 3DS|Old 3DS"},
-        {"citra_region_value",
-         "3DS system region; Auto|Japan|USA|Europe|Australia|China|Korea|Taiwan"},
-        {"citra_language",
-         "3DS system language; English|Japanese|French|Spanish|German|Italian|Dutch|Portuguese|"
-         "Russian|Korean|Traditional Chinese|Simplified Chinese"},
-        {"citra_use_gdbstub", "Enable GDB stub; disabled|enabled"},
-        {nullptr, nullptr}};
-
-    LibRetro::SetVariables(values);
+    LibRetro::RegisterCoreOptions();
 
     static const struct retro_controller_description controllers[] = {
         {"Nintendo 3DS", RETRO_DEVICE_JOYPAD},
@@ -202,34 +122,12 @@ uintptr_t LibRetro::GetFramebuffer() {
     return emu_instance->hw_render.get_current_framebuffer();
 }
 
-Settings::TextureFilter GetTextureFilter(std::string name) {
-    if (name == "Anime4K Ultrafast")
-        return Settings::TextureFilter::Anime4K;
-    if (name == "Bicubic")
-        return Settings::TextureFilter::Bicubic;
-    if (name == "ScaleForce")
-        return Settings::TextureFilter::ScaleForce;
-    if (name == "xBRZ freescale")
-        return Settings::TextureFilter::xBRZ;
-    if (name == "MMPX")
-        return Settings::TextureFilter::MMPX;
-
-    return Settings::TextureFilter::NoFilter;
-}
-
-Settings::TextureSampling GetTextureSampling(std::string name) {
-    if (name == "NearestNeighbor")
-        return Settings::TextureSampling::NearestNeighbor;
-    if (name == "Linear")
-        return Settings::TextureSampling::Linear;
-
-    return Settings::TextureSampling::GameControlled;
-}
-
 /**
  * Updates Citra's settings with Libretro's.
  */
-void UpdateSettings() {
+static void UpdateSettings() {
+    LibRetro::ParseCoreOptions();
+
     struct retro_input_descriptor desc[] = {
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT, "Left"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP, "Up"},
@@ -259,206 +157,6 @@ void UpdateSettings() {
     };
 
     LibRetro::SetInputDescriptors(desc);
-
-    // Some settings cannot be set by LibRetro frontends - options have to be
-    // finite. Make assumptions.
-    Settings::values.log_filter = "*:Info";
-    Settings::values.output_type = AudioCore::SinkType::LibRetro;
-    Settings::values.volume = 1.0f;
-
-    // We don't need these, as this is the frontend's responsibility.
-    Settings::values.enable_audio_stretching = false;
-    Settings::values.frame_limit = 10000;
-
-    // For our other settings, import them from LibRetro.
-    Settings::values.use_cpu_jit =
-        LibRetro::FetchVariable("citra_use_cpu_jit", "enabled") == "enabled";
-
-    auto cpuScaling = LibRetro::FetchVariable("citra_cpu_scale", "100%");
-    auto cpuScalingIndex = cpuScaling.find('%');
-    if (cpuScalingIndex == std::string::npos) {
-        LOG_ERROR(Frontend, "Failed to parse cpu scale!");
-        Settings::values.cpu_clock_percentage = 100;
-    } else {
-        int scale = stoi(cpuScaling.substr(0, cpuScalingIndex));
-        Settings::values.cpu_clock_percentage = scale;
-    }
-
-    auto graphicsApi = LibRetro::FetchVariable("citra_graphics_api", "Auto");
-    if (graphicsApi == "Software") {
-        Settings::values.graphics_api = Settings::GraphicsAPI::Software;
-#ifdef ENABLE_VULKAN
-    } else if (graphicsApi == "Vulkan") {
-        Settings::values.graphics_api = Settings::GraphicsAPI::Vulkan;
-#endif
-#ifdef ENABLE_OPENGL
-    } else if (graphicsApi == "OpenGL") {
-        Settings::values.graphics_api = Settings::GraphicsAPI::OpenGL;
-#endif
-    } else {
-        Settings::values.graphics_api = LibRetro::GetPreferredRenderer();
-    }
-
-    Settings::values.use_hw_shader =
-        LibRetro::FetchVariable("citra_use_hw_shaders", "enabled") == "enabled";
-    Settings::values.use_shader_jit =
-        LibRetro::FetchVariable("citra_use_shader_jit", "enabled") == "enabled";
-    Settings::values.shaders_accurate_mul =
-        LibRetro::FetchVariable("citra_use_acc_mul", "enabled") == "enabled";
-    Settings::values.use_virtual_sd =
-        LibRetro::FetchVariable("citra_use_virtual_sd", "enabled") == "enabled";
-    Settings::values.is_new_3ds =
-        LibRetro::FetchVariable("citra_is_new_3ds", "Old 3DS") == "New 3DS";
-    auto prominentScreen = LibRetro::FetchVariable("citra_swap_screen", "Top");
-    LibRetro::settings.inverted_swap_screen_state = !LibRetro::settings.swap_screen_state;
-    if (prominentScreen == "Bottom") {
-        Settings::values.swap_screen = LibRetro::settings.inverted_swap_screen_state;
-    } else {
-        Settings::values.swap_screen = LibRetro::settings.swap_screen_state;
-    }
-
-    LibRetro::settings.toggle_swap_screen =
-        LibRetro::FetchVariable("citra_swap_screen_mode", "Toggle") == "Toggle";
-    Settings::values.use_gdbstub =
-        LibRetro::FetchVariable("citra_use_gdbstub", "disabled") == "enabled";
-#if defined(USING_GLES)
-    Settings::values.use_gles = true;
-#else
-    Settings::values.use_gles = false;
-#endif
-    Settings::values.texture_filter =
-        GetTextureFilter(LibRetro::FetchVariable("citra_texture_filter", "none"));
-    Settings::values.texture_sampling =
-        GetTextureSampling(LibRetro::FetchVariable("citra_texture_sampling", "GameControlled"));
-    Settings::values.dump_textures =
-        LibRetro::FetchVariable("citra_dump_textures", "disabled") == "enabled";
-    Settings::values.custom_textures =
-        LibRetro::FetchVariable("citra_custom_textures", "disabled") == "enabled";
-    Settings::values.filter_mode = false;
-    Settings::values.pp_shader_name = "none (builtin)";
-    Settings::values.use_disk_shader_cache =
-        LibRetro::FetchVariable("citra_use_hw_shader_cache", "enabled") == "enabled";
-    Settings::values.use_vsync_new = 1;
-    Settings::values.render_3d = Settings::StereoRenderOption::Off;
-    Settings::values.factor_3d = 0;
-    Settings::values.bg_red = 0;
-    Settings::values.bg_green = 0;
-    Settings::values.bg_blue = 0;
-    LibRetro::settings.mouse_touchscreen =
-        LibRetro::FetchVariable("citra_mouse_touchscreen", "enabled") == "enabled";
-    LibRetro::settings.touch_touchscreen =
-        LibRetro::FetchVariable("citra_touch_touchscreen", "disabled") == "enabled";
-    LibRetro::settings.render_touchscreen =
-        LibRetro::FetchVariable("citra_render_touchscreen", "enabled") == "enabled";
-
-    // These values are a bit more hard to define, unfortunately.
-    auto scaling = LibRetro::FetchVariable("citra_resolution_factor", "1x (Native)");
-    auto endOfScale = scaling.find('x'); // All before 'x' in "_x ...", e.g "1x (Native)"
-    if (endOfScale == std::string::npos) {
-        LOG_ERROR(Frontend, "Failed to parse resolution scale!");
-        Settings::values.resolution_factor = 1;
-    } else {
-        int scale = stoi(scaling.substr(0, endOfScale));
-        Settings::values.resolution_factor = scale;
-    }
-
-    auto layout = LibRetro::FetchVariable("citra_layout_option", "Default Top-Bottom Screen");
-
-    if (layout == "Default Top-Bottom Screen") {
-        Settings::values.layout_option = Settings::LayoutOption::Default;
-    } else if (layout == "Single Screen Only") {
-        Settings::values.layout_option = Settings::LayoutOption::SingleScreen;
-    } else if (layout == "Large Screen, Small Screen") {
-        Settings::values.layout_option = Settings::LayoutOption::LargeScreen;
-    } else if (layout == "Side by Side") {
-        Settings::values.layout_option = Settings::LayoutOption::SideScreen;
-    } else {
-        LOG_ERROR(Frontend, "Unknown layout type: {}.", layout);
-        Settings::values.layout_option = Settings::LayoutOption::Default;
-    }
-
-    auto deadzone = LibRetro::FetchVariable("citra_deadzone", "5");
-    if (deadzone == "OFF"){
-        LibRetro::settings.deadzone = 0;
-    } else {
-        LibRetro::settings.deadzone = (float)std::stoi(deadzone) / 100;
-    }
-
-    auto maxspeed = LibRetro::FetchVariable("citra_maxspeed", "4");
-    LibRetro::settings.maxspeed = std::stoi(maxspeed);
-
-    auto responsecurve = LibRetro::FetchVariable("citra_responsecurve", "2");
-    LibRetro::settings.responsecurve = std::stod(responsecurve);
-
-    auto speedupratio = LibRetro::FetchVariable("citra_speedupratio", "1.5");
-    LibRetro::settings.speedupratio = std::stod(speedupratio);
-
-    auto analog_function =
-        LibRetro::FetchVariable("citra_analog_function", "Touchscreen and C-Stick (Toggle)");
-    if (analog_function == "Touchscreen and C-Stick (Toggle)") {
-        LibRetro::settings.analog_function = LibRetro::CStickFunction::Toggle;
-    } else if (analog_function == "Touchscreen and C-Stick") {
-        LibRetro::settings.analog_function = LibRetro::CStickFunction::Both;
-    } else if (analog_function == "C-Stick") {
-        LibRetro::settings.analog_function = LibRetro::CStickFunction::CStick;
-    } else if (analog_function == "Touchscreen") {
-        LibRetro::settings.analog_function = LibRetro::CStickFunction::Touchscreen;
-    } else {
-        LOG_ERROR(Frontend, "Unknown right analog function: {}.", analog_function);
-        LibRetro::settings.analog_function = LibRetro::CStickFunction::Both;
-    }
-
-    LibRetro::settings.analog_cstick_enabled = LibRetro::settings.analog_function == LibRetro::CStickFunction::Both || LibRetro::settings.analog_function == LibRetro::CStickFunction::CStick || (LibRetro::settings.analog_function == LibRetro::CStickFunction::Toggle && LibRetro::settings.analog_toggle == LibRetro::AnalogToggleState::ToggledAlternate);
-    LibRetro::settings.analog_touch_enabled = LibRetro::settings.analog_function == LibRetro::CStickFunction::Both || LibRetro::settings.analog_function == LibRetro::CStickFunction::Touchscreen || (LibRetro::settings.analog_function == LibRetro::CStickFunction::Toggle && LibRetro::settings.analog_toggle == LibRetro::AnalogToggleState::ToggledMain);
-
-    auto region = LibRetro::FetchVariable("citra_region_value", "Auto");
-    std::map<std::string, int> region_values;
-    region_values["Auto"] = -1;
-    region_values["Japan"] = 0;
-    region_values["USA"] = 1;
-    region_values["Europe"] = 2;
-    region_values["Australia"] = 3;
-    region_values["China"] = 4;
-    region_values["Korea"] = 5;
-    region_values["Taiwan"] = 6;
-
-    auto result = region_values.find(region);
-    if (result == region_values.end()) {
-        LOG_ERROR(Frontend, "Invalid region: {}.", region);
-        Settings::values.region_value = -1;
-    } else {
-        Settings::values.region_value = result->second;
-    }
-
-    auto language = LibRetro::FetchVariable("citra_language", "English");
-    if (language == "English") {
-        LibRetro::settings.language_value = Service::CFG::LANGUAGE_EN;
-    } else if (language == "Japanese") {
-        LibRetro::settings.language_value = Service::CFG::LANGUAGE_JP;
-    } else if (language == "French") {
-        LibRetro::settings.language_value = Service::CFG::LANGUAGE_FR;
-    } else if (language == "Spanish") {
-        LibRetro::settings.language_value = Service::CFG::LANGUAGE_ES;
-    } else if (language == "German") {
-        LibRetro::settings.language_value = Service::CFG::LANGUAGE_DE;
-    } else if (language == "Italian") {
-        LibRetro::settings.language_value = Service::CFG::LANGUAGE_IT;
-    } else if (language == "Dutch") {
-        LibRetro::settings.language_value = Service::CFG::LANGUAGE_NL;
-    } else if (language == "Portuguese") {
-        LibRetro::settings.language_value = Service::CFG::LANGUAGE_PT;
-    } else if (language == "Russian") {
-        LibRetro::settings.language_value = Service::CFG::LANGUAGE_RU;
-    } else if (language == "Korean") {
-        LibRetro::settings.language_value = Service::CFG::LANGUAGE_KO;
-    } else if (language == "Traditional Chinese") {
-        LibRetro::settings.language_value = Service::CFG::LANGUAGE_TW;
-    } else if (language == "Simplified Chinese") {
-        LibRetro::settings.language_value = Service::CFG::LANGUAGE_ZH;
-    } else {
-        LOG_ERROR(Frontend, "Invalid language: {}.", language);
-        LibRetro::settings.language_value = Service::CFG::LANGUAGE_EN;
-    }
 
     Settings::values.current_input_profile.touch_device = "engine:emu_window";
 
@@ -529,35 +227,6 @@ void UpdateSettings() {
         Settings::values.current_input_profile.analogs[1] = "";
     }
 
-    // Configure the file storage location
-    auto use_libretro_saves = LibRetro::FetchVariable("citra_use_libretro_save_path",
-                                                      "LibRetro Default") == "LibRetro Default";
-
-    if (use_libretro_saves) {
-        auto target_dir = LibRetro::GetSaveDir();
-        if (target_dir.empty()) {
-            LOG_INFO(Frontend, "No save dir provided; trying system dir...");
-            target_dir = LibRetro::GetSystemDir();
-        }
-
-        if (!target_dir.empty()) {
-            if (!target_dir.ends_with("/"))
-                target_dir += "/";
-
-            target_dir += "Azahar/";
-
-            // Ensure that this new dir exists
-            if (!FileUtil::CreateDir(target_dir)) {
-                LOG_ERROR(Frontend, "Failed to create \"{}\". Using Azahar's default paths.",
-                          target_dir);
-            } else {
-                FileUtil::SetUserPath(target_dir);
-                const auto& target_dir_result = FileUtil::GetUserPath(FileUtil::UserPath::UserDir);
-                LOG_INFO(Frontend, "User dir set to \"{}\".", target_dir_result);
-            }
-        }
-    }
-
     if (!emu_instance->emu_window) {
         emu_instance->emu_window = std::make_unique<EmuWindow_LibRetro>();
     }
@@ -574,7 +243,7 @@ void UpdateSettings() {
 void retro_run() {
     // Check to see if we actually have any config updates to process.
     if (LibRetro::HasUpdatedConfig()) {
-        UpdateSettings();
+        LibRetro::ParseCoreOptions();
     }
     bool analog_function_btn =
         !!LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3);

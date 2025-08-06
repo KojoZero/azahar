@@ -32,6 +32,15 @@ void PollInput();
 /// Sets the environmental variables used for settings.
 bool SetVariables(const retro_variable vars[]);
 
+/// Sets the core options using the v2 interface with categories.
+bool SetCoreOptionsV2(const retro_core_options_v2* options);
+
+/// Sets the core options using the v1 interface.
+bool SetCoreOptionsV1(const retro_core_option_definition* options);
+
+/// Gets the core options version supported by the frontend.
+bool GetCoreOptionsVersion(unsigned* version);
+
 bool SetHWSharedContext(void);
 
 /// Returns the LibRetro save directory, or a empty string if one doesn't exist.
@@ -100,6 +109,10 @@ bool DisplayMessage(const char* sg);
 
 #ifdef HAVE_LIBRETRO_VFS
 void SetVFSCallback(struct retro_vfs_interface_info* vfs_iface_info);
+#endif
+
+#ifdef IOS
+bool CanUseJIT();
 #endif
 
 } // namespace LibRetro

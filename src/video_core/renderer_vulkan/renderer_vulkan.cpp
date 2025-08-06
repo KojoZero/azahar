@@ -22,7 +22,7 @@
 
 #include <vk_mem_alloc.h>
 
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(HAVE_LIBRETRO)
 #include "common/apple_utils.h"
 #endif
 
@@ -60,7 +60,11 @@ constexpr static std::array<vk::DescriptorSetLayoutBinding, 1> PRESENT_BINDINGS 
 
 namespace {
 static bool IsLowRefreshRate() {
-#ifdef ENABLE_SDL2
+#if (defined(__APPLE__) || defined(ENABLE_SDL2)) && !defined(HAVE_LIBRETRO)
+#ifdef __APPLE__ // Need a special implementation because MacOS kills itself in disgust if the
+                 // input thread calls SDL_PumpEvents at the same time as we're in SDL_Init here.
+    const auto cur_refresh_rate = AppleUtils::GetRefreshRate();
+#elif defined(ENABLE_SDL2)
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         LOG_ERROR(Render_Vulkan, "SDL video failed to initialize, unable to check refresh rate");
         return false;
@@ -71,6 +75,7 @@ static bool IsLowRefreshRate() {
     const auto cur_refresh_rate = cur_display_mode.refresh_rate;
 
     SDL_QuitSubSystem(SDL_INIT_VIDEO);
+#endif // __APPLE__
 
     if (cur_refresh_rate < SCREEN_REFRESH_RATE) {
         LOG_WARNING(Render_Vulkan,
@@ -79,9 +84,9 @@ static bool IsLowRefreshRate() {
                     cur_refresh_rate);
         return true;
     }
-#endif
+#endif // defined(__APPLE__) || defined(ENABLE_SDL2)
 
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(HAVE_LIBRETRO)
     // Apple's low power mode sometimes limits applications to 30fps without changing the refresh
     // rate, meaning the above code doesn't catch it.
     if (AppleUtils::IsLowPowerModeEnabled()) {

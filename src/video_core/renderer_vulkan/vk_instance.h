@@ -250,6 +250,11 @@ public:
         return features.shaderSampledImageArrayDynamicIndexing;
     }
 
+    /// Returns true if layered rendering (array attachments) is supported
+    bool IsLayeredRenderingSupported() const {
+        return layered_rendering_supported;
+    }
+
     /// Returns the minimum vertex stride alignment
     u32 GetMinVertexStrideAlignment() const {
         return min_vertex_stride_alignment;
@@ -324,6 +329,7 @@ protected:
     bool shader_stencil_export{};
     bool external_memory_host{};
     u64 min_imported_host_pointer_alignment{};
+    bool layered_rendering_supported{true};
     bool tooling_info{};
     bool debug_utils_supported{};
     bool has_nsight_graphics{};
