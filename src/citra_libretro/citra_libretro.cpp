@@ -576,15 +576,6 @@ void retro_run() {
     if (LibRetro::HasUpdatedConfig()) {
         UpdateSettings();
     }
-
-    // retro_log_printf_t log_cb = LibRetro::GetLoggingBackend();
-    // if (log_cb)
-    //     log_cb(RETRO_LOG_INFO, "CStick Enabled: %d, Analog_function: %d, Analog_toggle: %d\n",(LibRetro::settings.cstick_enabled),(LibRetro::settings.analog_function),(LibRetro::settings.analog_toggle));
-
-
-
-    // if (log_cb)
-    //     log_cb(RETRO_LOG_INFO, "Analog_toggle: Log Test, Analog_function: Log Test\n");
     bool analog_function_btn =
         !!LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3);
     static bool analog_function_btn_state = false;
@@ -620,7 +611,6 @@ void retro_run() {
 
     static bool screen_swap_btn_state = false;
     static bool screen_swap_toggled = false;
-    //bool screen_swap_btn = false;
     bool screen_swap_btn =
         !!LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3);
     if (screen_swap_btn != screen_swap_btn_state) {

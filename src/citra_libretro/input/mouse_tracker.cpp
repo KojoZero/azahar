@@ -138,7 +138,6 @@ void MouseTracker::Update(int bufferWidth, int bufferHeight,
         // TODO: Provide config option for ratios here
         int maxSpeed = LibRetro::settings.maxspeed;
         float realSpeed;
-
         switch (maxSpeed) {
             case 1:
                 realSpeed = 0.4f;
@@ -172,7 +171,6 @@ void MouseTracker::Update(int bufferWidth, int bufferHeight,
         }
         //float widthSpeed = (bottomScreen.GetWidth() / 20.0) * realSpeed;
         float heightSpeed = (bottomScreen.GetHeight() / 20.0) * realSpeed;
-
         // Use controller movement
         float joystickNormX =
             ((float)LibRetro::CheckInput(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT,
@@ -182,27 +180,20 @@ void MouseTracker::Update(int bufferWidth, int bufferHeight,
             ((float)LibRetro::CheckInput(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT,
                                          RETRO_DEVICE_ID_ANALOG_Y) /
              INT16_MAX);
-
-        // Deadzone the controller inputs
         float deadzone = LibRetro::settings.deadzone;
         bool speedup_enabled = LibRetro::settings.speedup_enabled;
         float responsecurve = LibRetro::settings.responsecurve;
         float speedupratio = LibRetro::settings.speedupratio;
-
         float radialLength = std::sqrt((joystickNormX * joystickNormX) + (joystickNormY * joystickNormY));
-
         float joystickScaledX = 0.0f;
         float joystickScaledY = 0.0f;
-
         if (radialLength > deadzone) {
             // Get X and Y as a relation to the radial length
             float dirX = joystickNormX / radialLength;
             float dirY = joystickNormY / radialLength;
-
-            // Apply deadzone and curve
+            // Apply deadzone and response curve
             float scaledLength = (radialLength - deadzone) / (1.0f - deadzone);
             float curvedLength = std::pow(std::min<float>(1.0f, scaledLength), responsecurve);
-
             // Final output
             float finalLength = speedup_enabled ? curvedLength * speedupratio : curvedLength;
             joystickScaledX = dirX * finalLength;
@@ -211,12 +202,6 @@ void MouseTracker::Update(int bufferWidth, int bufferHeight,
             joystickScaledX = 0.0f;
             joystickScaledY = 0.0f;
         }
-
-        // retro_log_printf_t log_cb = GetLoggingBackend();
-        // if (log_cb)
-        //     log_cb(RETRO_LOG_INFO, "slowdownratio: %f, slowdown_enabled: %d, responsecurve: %f, joystickScaledX: %f, joystickScaledY: %f\n",
-        //             slowdownratio, slowdown_enabled, responsecurve, joystickScaledX, joystickScaledY);
-
         OnMouseMove(static_cast<float>(joystickScaledX * heightSpeed),
                     static_cast<float>(joystickScaledY * heightSpeed));
     }
