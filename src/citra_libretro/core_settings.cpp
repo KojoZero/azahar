@@ -562,21 +562,20 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
             {"9", "9"},
             {nullptr, nullptr},
         },
-        "4"
+        "3"
     },
     {
         config::input::responsecurve,
         "Analog Pointer Response Curve",
         "Analog Pointer Response Curve",
-        "Set the response curve for the analog pointer to have finer control near the center.\n"
+        "Set the response curve for the analog pointer.\n"
         "1 is a linear response curve where the cursor speed is 1:1 with the joystick input.\n"
-        "2 and 3 are exponential curves that reduce sensitivity near the joystick center for finer control but increase the sensitivity near the edges",
+        "2 is an exponential curve that reduces the sensitivity near the joystick center for finer control, but increases the sensitivity near the edges",
         nullptr,
         config::category::input,
         {
             {"1", "1"},
             {"2", "2"},
-            {"3", "3"},
             {nullptr, nullptr},
         },
         "2"
@@ -590,10 +589,12 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
         config::category::input,
         {
             {"1.5", "150%"},
-            {"2", "200%"},
+            {"2.0", "200%"},
+            {"2.5", "250%"},
+            {"3.0", "300%"},
             {nullptr, nullptr},
         },
-        "1.5"
+        "2.0"
     },
     {
         config::input::mouse_touchscreen,
@@ -1002,13 +1003,13 @@ static void ParseInputOptions(void) {
     auto deadzone = LibRetro::FetchVariable("citra_deadzone", "5");
     LibRetro::settings.deadzone = (float)std::stoi(deadzone) / 100;
 
-    auto maxspeed = LibRetro::FetchVariable("citra_maxspeed", "4");
+    auto maxspeed = LibRetro::FetchVariable("citra_maxspeed", "3");
     LibRetro::settings.maxspeed = std::stoi(maxspeed);
 
     auto responsecurve = LibRetro::FetchVariable("citra_responsecurve", "2");
     LibRetro::settings.responsecurve = std::stod(responsecurve);
 
-    auto speedupratio = LibRetro::FetchVariable("citra_speedupratio", "1.5");
+    auto speedupratio = LibRetro::FetchVariable("citra_speedupratio", "2.0");
     LibRetro::settings.speedupratio = std::stod(speedupratio);
 
     LibRetro::settings.mouse_touchscreen =
