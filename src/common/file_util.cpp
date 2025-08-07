@@ -43,7 +43,6 @@
 #define fseeko _fseeki64
 #define ftello _ftelli64
 #define fileno _fileno
-
 typedef struct _stat64 file_stat_t;
 #define fstat _fstat64
 #elif defined(HAVE_LIBRETRO)
@@ -452,7 +451,7 @@ u64 GetSize(const std::string& filename) {
 }
 
 u64 GetSize(const int fd) {
-    struct stat buf;
+    file_stat_t buf;
     if (fstat(fd, &buf) != 0) {
         LOG_ERROR(Common_Filesystem, "GetSize: stat failed {}: {}", fd, GetLastErrorMsg());
         return 0;
