@@ -243,7 +243,7 @@ static void UpdateSettings() {
 void retro_run() {
     // Check to see if we actually have any config updates to process.
     if (LibRetro::HasUpdatedConfig()) {
-        LibRetro::ParseCoreOptions();
+        UpdateSettings();
     }
     bool analog_function_btn =
         !!LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3);
@@ -311,12 +311,6 @@ void retro_run() {
                 }
             }
         }
-
-        Core::System::GetInstance().ApplySettings();
-
-        // Update the framebuffer sizing.
-        emu_instance->emu_window->UpdateLayout();
-
         screen_swap_btn_state = screen_swap_btn;
     }
 
