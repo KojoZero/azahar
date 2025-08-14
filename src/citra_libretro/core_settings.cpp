@@ -59,6 +59,7 @@ static constexpr const char* dump_textures = "citra_dump_textures";
 
 namespace layout {
 static constexpr const char* layout_option = "citra_layout_option";
+static constexpr const char* large_screen_proportion = "citra_large_screen_proportion";
 static constexpr const char* swap_screen = "citra_swap_screen";
 static constexpr const char* toggle_swap_screen = "citra_swap_screen_mode";
 } // namespace layout
@@ -457,6 +458,21 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
             { nullptr, nullptr }
         },
         "Top"
+    },
+    {
+        config::layout::large_screen_proportion,
+        "Large Screen Ratio",
+        "Large Screen Ratio",
+        "Set the size ratio of the larger screen compared to the smaller screen in large screen layout.",
+        nullptr,
+        config::category::layout,
+        {
+            { "2", "2x" },
+            { "3", "3x" },
+            { "4", "4x" },
+            { nullptr, nullptr }
+        },
+        "2"
     },
     {
         config::layout::toggle_swap_screen,
@@ -928,7 +944,8 @@ static Settings::LayoutOption GetLayoutOption(const std::string& name) {
 static void ParseLayoutOptions(void) {
     Settings::values.layout_option =
         GetLayoutOption(LibRetro::FetchVariable(config::layout::layout_option, "default"));
-
+    Settings::values.large_screen_proportion =
+        std::stoi(LibRetro::FetchVariable(config::layout::large_screen_proportion, "2"));
     auto prominentScreen = LibRetro::FetchVariable(config::layout::swap_screen, "Top");
     LibRetro::settings.inverted_swap_screen_state = !LibRetro::settings.swap_screen_state;
     if (prominentScreen == "Bottom") {
