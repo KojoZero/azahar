@@ -60,6 +60,7 @@ static constexpr const char* dump_textures = "citra_dump_textures";
 namespace layout {
 static constexpr const char* layout_option = "citra_layout_option";
 static constexpr const char* large_screen_proportion = "citra_large_screen_proportion";
+static constexpr const char* small_screen_position = "citra_small_screen_position";
 static constexpr const char* swap_screen = "citra_swap_screen";
 static constexpr const char* toggle_swap_screen = "citra_swap_screen_mode";
 } // namespace layout
@@ -473,6 +474,26 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
             { nullptr, nullptr }
         },
         "2"
+    },
+    {
+        config::layout::small_screen_position,
+        "Small Screen Position",
+        "Small Screen Position",
+        "Set the position of the smaller screen in large screen layout.",
+        nullptr,
+        config::category::layout,
+        {
+            { "TopRight", "Top Right" },
+            { "MiddleRight", "Middle Right" },
+            { "BottomRight", "Bottom Right" },
+            { "TopLeft", "Top Left" },
+            { "MiddleLeft", "Middle Left" },
+            { "BottomLeft", "Bottom Left" },
+            { "AboveLarge", "Above Large" },
+            { "BelowLarge", "Below Large" },
+            { nullptr, nullptr }
+        },
+        "MiddleRight"
     },
     {
         config::layout::toggle_swap_screen,
@@ -938,7 +959,29 @@ static Settings::LayoutOption GetLayoutOption(const std::string& name) {
         return Settings::LayoutOption::LargeScreen;
     if (name == "side_by_side" || name == "Side by Side")
         return Settings::LayoutOption::SideScreen;
+    if (name == "default" || name == "Default Top-Bottom")
+        return Settings::LayoutOption::Default;
     return Settings::LayoutOption::Default;
+}
+
+static Settings::SmallScreenPosition GetSmallScreenPosition(const std::string& name) {
+    if (name == "TopRight" || name == "Top Right")
+        return Settings::SmallScreenPosition::TopRight;
+    if (name == "MiddleRight" || name == "Middle Right")
+        return Settings::SmallScreenPosition::MiddleRight;
+    if (name == "BottomRight" || name == "Bottom Right")
+        return Settings::SmallScreenPosition::BottomRight;
+    if (name == "TopLeft" || name == "Top Left")
+        return Settings::SmallScreenPosition::TopLeft;
+    if (name == "MiddleLeft" || name == "Middle Left")
+        return Settings::SmallScreenPosition::MiddleLeft;
+    if (name == "BottomLeft" || name == "Bottom Left")
+        return Settings::SmallScreenPosition::BottomLeft;
+    if (name == "AboveLarge" || name == "Above Large")
+        return Settings::SmallScreenPosition::AboveLarge;
+    if (name == "BelowLarge" || name == "Below Large")
+        return Settings::SmallScreenPosition::BelowLarge;
+    return Settings::SmallScreenPosition::MiddleRight; // Default
 }
 
 static void ParseLayoutOptions(void) {
@@ -946,6 +989,8 @@ static void ParseLayoutOptions(void) {
         GetLayoutOption(LibRetro::FetchVariable(config::layout::layout_option, "default"));
     Settings::values.large_screen_proportion =
         std::stoi(LibRetro::FetchVariable(config::layout::large_screen_proportion, "2"));
+    Settings::values.small_screen_position =
+        GetSmallScreenPosition(LibRetro::FetchVariable(config::layout::small_screen_position, "MiddleRight"));
     auto prominentScreen = LibRetro::FetchVariable(config::layout::swap_screen, "Top");
     LibRetro::settings.inverted_swap_screen_state = !LibRetro::settings.swap_screen_state;
     if (prominentScreen == "Bottom") {

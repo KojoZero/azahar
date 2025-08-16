@@ -241,6 +241,12 @@ static void UpdateSettings() {
  * libretro callback; Called every game tick.
  */
 void retro_run() {
+    // Initialize the layout for the first time.
+    if (!LibRetro::settings.initializedLayout) {
+        emu_instance->emu_window->UpdateLayout();
+        LibRetro::settings.initializedLayout = true;
+    }
+
     // Check to see if we actually have any config updates to process.
     if (LibRetro::HasUpdatedConfig()) {
         UpdateSettings();

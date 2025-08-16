@@ -36,6 +36,8 @@ struct CoreSettings {
 
     bool inverted_swap_screen_state;
 
+    bool initializedLayout;
+
     bool analog_cstick_enabled;
 
     bool analog_touch_enabled;
