@@ -25,6 +25,7 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         target: ["appimage", "fresh"]
     container:
@@ -63,6 +64,7 @@ jobs:
   macos:
     runs-on: ${{ (matrix.target == 'x86_64' && 'macos-13') || 'macos-14' }}
     strategy:
+      fail-fast: false
       matrix:
         target: ["x86_64", "arm64"]
     env:
@@ -87,12 +89,19 @@ jobs:
       - name: Build
         run: ./.ci/macos.sh
       - name: Prepare outputs for caching
-        run: mv build/bundle $OS-$TARGET
+        run: cp -R build/bundle $OS-$TARGET
       - name: Cache outputs for universal build
         uses: actions/cache/save@v4
         with:
           path: ${{ env.OS }}-${{ env.TARGET }}
           key: ${{ runner.os }}-${{ matrix.target }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Pack
+        run: ./.ci/pack.sh
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.OS }}-${{ env.TARGET }}
+          path: artifacts/
   macos-universal:
     runs-on: macos-14
     needs: macos
@@ -127,6 +136,7 @@ jobs:
   windows:
     runs-on: windows-latest
     strategy:
+      fail-fast: false
       matrix:
         target: ["msvc", "msys2"]
     defaults:
