@@ -72,7 +72,7 @@ void EmuWindow_LibRetro::SwapBuffers() {
 #ifdef ENABLE_OPENGL
         auto current_state = OpenGL::OpenGLState::GetCurState();
         ResetGLState();
-        if (enableEmulatedPointer) {
+        if (enableEmulatedPointer && tracker) {
             tracker->Render(width, height);
         }
         LibRetro::UploadVideoFrame(RETRO_HW_FRAME_BUFFER_VALID, static_cast<unsigned>(width),
@@ -84,6 +84,9 @@ void EmuWindow_LibRetro::SwapBuffers() {
     }
     case Settings::GraphicsAPI::Vulkan: {
 #ifdef ENABLE_VULKAN
+        if (enableEmulatedPointer && tracker) {
+            tracker->Render(width, height);
+        }
         LibRetro::UploadVideoFrame(RETRO_HW_FRAME_BUFFER_VALID, static_cast<unsigned>(width),
                                    static_cast<unsigned>(height), 0);
 #endif
@@ -110,6 +113,12 @@ void EmuWindow_LibRetro::SwapBuffers() {
         // this is also not correct
         std::memcpy(((uint8_t*)data) + tl_info.pixels.size(), b_info.pixels.data(),
                     b_info.pixels.size());
+
+        // Software cursor rendering with framebuffer access
+        if (enableEmulatedPointer && tracker) {
+            tracker->Render(width, height, data);
+        }
+
         LibRetro::UploadVideoFrame(data, static_cast<unsigned>(width),
                                    static_cast<unsigned>(height), 0);
         if (did_malloc)
@@ -141,9 +150,8 @@ void EmuWindow_LibRetro::PollEvents() {
 
     // TODO: Poll for right click for motion emu
 
-#ifdef ENABLE_OPENGL
-    if (enableEmulatedPointer) {
-        tracker->Update(width, height, GetFramebufferLayout().bottom_screen);
+    if (enableEmulatedPointer && tracker) {
+        tracker->Update(width, height, GetFramebufferLayout());
 
         if (tracker->IsPressed()) {
             auto mousePos = tracker->GetPressedPosition();
@@ -159,7 +167,6 @@ void EmuWindow_LibRetro::PollEvents() {
             TouchReleased();
         }
     }
-#endif
 }
 
 void EmuWindow_LibRetro::MakeCurrent() {
@@ -182,8 +189,7 @@ void EmuWindow_LibRetro::UpdateLayout() {
 
     bool swapped = Settings::values.swap_screen.GetValue();
 
-    enableEmulatedPointer =
-        (Settings::values.graphics_api.GetValue() == Settings::GraphicsAPI::OpenGL);
+    enableEmulatedPointer = true;
 
     switch (Settings::values.layout_option.GetValue()) {
     case Settings::LayoutOption::SingleScreen:
@@ -265,17 +271,11 @@ bool EmuWindow_LibRetro::HasSubmittedFrame() {
 }
 
 void EmuWindow_LibRetro::CreateContext() {
-#ifdef ENABLE_OPENGL
-    if (Settings::values.graphics_api.GetValue() == Settings::GraphicsAPI::OpenGL) {
-        tracker = std::make_unique<LibRetro::Input::MouseTracker>();
-    }
-#endif
+    tracker = std::make_unique<LibRetro::Input::MouseTracker>();
 
     doCleanFrame = true;
 }
 
 void EmuWindow_LibRetro::DestroyContext() {
-#ifdef ENABLE_OPENGL
     tracker = nullptr;
-#endif
 }

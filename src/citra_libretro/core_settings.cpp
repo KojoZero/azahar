@@ -930,7 +930,7 @@ static void ParseInputOptions(void) {
         config::enabled;
 
     LibRetro::settings.touch_touchscreen =
-        LibRetro::FetchVariable(config::input::touch_touchscreen, config::disabled) ==
+        LibRetro::FetchVariable(config::input::touch_touchscreen, config::enabled) ==
         config::enabled;
 
     LibRetro::settings.render_touchscreen =
