@@ -634,7 +634,8 @@ void System::Shutdown(bool is_deserializing) {
     // Shutdown emulation session
     is_powered_on = false;
 
-    gpu.reset();
+    ShutdownGpu();
+
     if (!is_deserializing) {
         lle_modules.clear();
         GDBStub::Shutdown();
@@ -669,6 +670,30 @@ void System::Shutdown(bool is_deserializing) {
     self_delete_pending = false;
 
     LOG_DEBUG(Core, "Shutdown OK");
+}
+
+void System::ShutdownGpu() {
+    if (gpu) {
+        gpu.reset();
+    }
+}
+
+void System::InitGpu(Frontend::EmuWindow& emu_window, Frontend::EmuWindow* secondary_window) {
+    if (gpu) {
+        gpu.reset();
+    }
+    if (!service_manager) {
+        LOG_DEBUG(Core, "Service manager not ready, deferring GPU initialization");
+        return;
+    }
+    auto gsp = service_manager->GetService<Service::GSP::GSP_GPU>("gsp::Gpu");
+    if (!gsp) {
+        LOG_ERROR(Core, "GSP service not available, cannot initialize GPU");
+        return;
+    }
+    gpu = std::make_unique<VideoCore::GPU>(*this, emu_window, secondary_window);
+    gpu->SetInterruptHandler(
+        [gsp](Service::GSP::InterruptId interrupt_id) { gsp->SignalInterrupt(interrupt_id); });
 }
 
 void System::Reset() {
