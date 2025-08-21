@@ -79,6 +79,8 @@ static constexpr const char* speedupratio = "citra_speedupratio";
 static constexpr const char* mouse_touchscreen = "citra_mouse_touchscreen";
 static constexpr const char* touch_touchscreen = "citra_touch_touchscreen";
 static constexpr const char* render_touchscreen = "citra_render_touchscreen";
+static constexpr const char* motion_enabled = "citra_motion_enabled";
+static constexpr const char* motion_sensitivity = "citra_motion_sensitivity";
 } // namespace input
 
 } // namespace config
@@ -675,6 +677,40 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
         },
         config::enabled
     },
+    {
+        config::input::motion_enabled,
+        "Gyroscope/Accelerometer Support",
+        "Motion Support",
+        "Enable gyroscope and accelerometer input for games that support motion controls.",
+        nullptr,
+        config::category::input,
+        {
+            { config::enabled, "Enabled" },
+            { config::disabled, "Disabled" },
+            { nullptr, nullptr }
+        },
+        config::enabled
+    },
+    {
+        config::input::motion_sensitivity,
+        "Motion Sensitivity",
+        "Motion Sensitivity",
+        "Adjust sensitivity of motion controls (gyroscope/accelerometer).",
+        nullptr,
+        config::category::input,
+        {
+            { "0.1", "10%" },
+            { "0.25", "25%" },
+            { "0.5", "50%" },
+            { "0.75", "75%" },
+            { "1.0", "100%" },
+            { "1.25", "125%" },
+            { "1.5", "150%" },
+            { "2.0", "200%" },
+            { nullptr, nullptr }
+        },
+        "1.0"
+    },
 
     // Terminator
     { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, { { nullptr, nullptr } }, nullptr }
@@ -1079,12 +1115,25 @@ static void ParseInputOptions(void) {
         config::enabled;
 
     LibRetro::settings.touch_touchscreen =
-        LibRetro::FetchVariable(config::input::touch_touchscreen, config::disabled) ==
+        LibRetro::FetchVariable(config::input::touch_touchscreen, config::enabled) ==
         config::enabled;
 
     LibRetro::settings.render_touchscreen =
         LibRetro::FetchVariable(config::input::render_touchscreen, config::enabled) ==
         config::enabled;
+    LibRetro::settings.motion_enabled =
+        LibRetro::FetchVariable(config::input::motion_enabled, config::enabled) == config::enabled;
+    auto motion_sens = LibRetro::FetchVariable(config::input::motion_sensitivity, "1.0");
+    LibRetro::settings.motion_sensitivity = std::stof(motion_sens);
+
+    // Configure motion device based on user settings
+    if (LibRetro::settings.motion_enabled) {
+        Settings::values.current_input_profile.motion_device =
+            "port:0,sensitivity:" + std::to_string(LibRetro::settings.motion_sensitivity) +
+            ",engine:libretro";
+    } else {
+        Settings::values.current_input_profile.motion_device = "engine:motion_emu";
+    }
 }
 
 void ParseCoreOptions(void) {

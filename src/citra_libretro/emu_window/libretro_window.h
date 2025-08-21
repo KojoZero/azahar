@@ -57,13 +57,11 @@ private:
     // Hack to ensure stuff runs on the main thread
     bool doCleanFrame = false;
 
-#ifdef ENABLE_OPENGL
     // For tracking LibRetro state
     bool hasTouched = false;
 
     // For tracking mouse cursor
     std::unique_ptr<LibRetro::Input::MouseTracker> tracker = nullptr;
-#endif
 
     bool enableEmulatedPointer = false;
 };

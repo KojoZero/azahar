@@ -52,6 +52,10 @@ struct CoreSettings {
 
     bool toggle_swap_screen;
 
+    bool motion_enabled;
+
+    float motion_sensitivity;
+
 } extern settings;
 
 void RegisterCoreOptions(void);

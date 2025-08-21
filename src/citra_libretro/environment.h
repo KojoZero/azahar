@@ -29,6 +29,9 @@ void UploadVideoFrame(const void* data, unsigned width, unsigned height, size_t 
 /// @see retro_input_poll_t
 void PollInput();
 
+/// Gets the sensor interface for motion input
+bool GetSensorInterface(struct retro_sensor_interface* sensor_interface);
+
 /// Sets the environmental variables used for settings.
 bool SetVariables(const retro_variable vars[]);
 
