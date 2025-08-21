@@ -401,7 +401,8 @@ static void context_reset() {
 
 static void context_destroy() {
     LOG_DEBUG(Frontend, "context_destroy");
-    if (emu_instance->game_loaded && Settings::values.graphics_api.GetValue() == Settings::GraphicsAPI::OpenGL) {
+    if (emu_instance->game_loaded &&
+        Settings::values.graphics_api.GetValue() == Settings::GraphicsAPI::OpenGL) {
         Core::System::GetInstance().ShutdownGpu();
     }
 }
