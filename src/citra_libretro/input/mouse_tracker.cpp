@@ -257,7 +257,7 @@ void MouseTracker::Update(int bufferWidth, int bufferHeight,
                     static_cast<float>(joystickScaledY * heightSpeed));
     }
 
-    Restrict(0, 0, layout.bottom_screen.GetWidth(), layout.bottom_screen.GetHeight());
+    Restrict(0, 0, layout.bottom_screen.GetWidth()-1, layout.bottom_screen.GetHeight()-1);
 
     // Make the coordinates 0 -> 1
     projectedX = (float)x / layout.bottom_screen.GetWidth();
