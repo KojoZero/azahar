@@ -149,6 +149,10 @@ private:
 
     // Vulkan objects
     vk::Queue graphics_queue{};
+
+    // Persistent LibRetro image descriptor, must persist across frames for RetroArch frame duping
+    // during pause
+    retro_vulkan_image persistent_libretro_image{};
 };
 
 } // namespace Vulkan

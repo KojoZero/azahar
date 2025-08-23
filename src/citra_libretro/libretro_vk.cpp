@@ -659,19 +659,18 @@ void PresentWindow::Present(Frame* frame) {
         return;
     }
 
-    // Create LibRetro image descriptor using the actual create info
-    struct retro_vulkan_image libretro_image = {};
-    libretro_image.image_view = static_cast<VkImageView>(frame->image_view);
-    libretro_image.image_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-    // Use the exact create info that was used to create the image view
-    libretro_image.create_info = static_cast<VkImageViewCreateInfo>(output_view_create_info);
+    // CRITICAL: Use persistent struct to avoid stack lifetime issues!
+    // RetroArch may cache this pointer for frame duping during pause
+    persistent_libretro_image.image_view = static_cast<VkImageView>(frame->image_view);
+    persistent_libretro_image.image_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    persistent_libretro_image.create_info =
+        static_cast<VkImageViewCreateInfo>(output_view_create_info);
 
     // CRITICAL: Following PPSSPP pattern - pass NO semaphores to set_image!
     // RetroArch handles all synchronization through its own mechanisms
     LOG_DEBUG(Render_Vulkan, "Submitting frame with no semaphores (RetroArch manages sync)");
 
-    vulkan_intf->set_image(vulkan_intf->handle, &libretro_image, 0, nullptr,
+    vulkan_intf->set_image(vulkan_intf->handle, &persistent_libretro_image, 0, nullptr,
                            instance.GetGraphicsQueueFamilyIndex());
 
     // Call EmuWindow SwapBuffers to trigger LibRetro video frame submission
