@@ -132,12 +132,6 @@ public:
     /// Shutdown and then load again
     void Reset();
 
-    /// Shutdown the GPU subsystem.
-    void ShutdownGpu();
-
-    /// Initialize the GPU subsystem.
-    void InitGpu(Frontend::EmuWindow& emu_window, Frontend::EmuWindow* secondary_window);
-
     enum class Signal : u32 { None, Shutdown, Reset, Save, Load };
 
     bool SendSignal(Signal signal, u32 param = 0);

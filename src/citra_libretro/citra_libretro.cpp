@@ -351,10 +351,6 @@ static void* load_opengl_func(const char* name) {
 static void context_reset() {
     LOG_DEBUG(Frontend, "context_reset");
 
-    if (emu_instance->game_loaded) {
-        Core::System::GetInstance().InitGpu(*emu_instance->emu_window, nullptr);
-    }
-
     switch (Settings::values.graphics_api.GetValue()) {
 #ifdef ENABLE_OPENGL
     case Settings::GraphicsAPI::OpenGL:
@@ -389,13 +385,17 @@ static void context_reset() {
 
     emu_instance->emu_window->CreateContext();
 
-    if (!emu_instance->game_loaded)
+    if (!emu_instance->game_loaded) {
         emu_instance->game_loaded = do_load_game();
-    else {
-        Core::System::GetInstance().InitGpu(*emu_instance->emu_window, nullptr);
-        if (Settings::values.use_disk_shader_cache)
-            Core::System::GetInstance().GPU().Renderer().Rasterizer()->LoadDefaultDiskResources(
-                false, nullptr);
+    } else {
+        // Game is already loaded, just recreate the renderer for the new GL context
+        if (Settings::values.graphics_api.GetValue() == Settings::GraphicsAPI::OpenGL) {
+            Core::System::GetInstance().GPU().RecreateRenderer(*emu_instance->emu_window, nullptr);
+            if (Settings::values.use_disk_shader_cache) {
+                Core::System::GetInstance().GPU().Renderer().Rasterizer()->LoadDefaultDiskResources(
+                    false, nullptr);
+            }
+        }
     }
 }
 
@@ -403,8 +403,10 @@ static void context_destroy() {
     LOG_DEBUG(Frontend, "context_destroy");
     if (emu_instance->game_loaded &&
         Settings::values.graphics_api.GetValue() == Settings::GraphicsAPI::OpenGL) {
-        Core::System::GetInstance().ShutdownGpu();
+        // Release the renderer's OpenGL resources
+        Core::System::GetInstance().GPU().ReleaseRenderer();
     }
+    emu_instance->emu_window->DestroyContext();
 }
 
 void retro_reset() {
