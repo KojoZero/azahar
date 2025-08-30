@@ -12,6 +12,7 @@
 
 #ifdef ENABLE_OPENGL
 #include "glad/glad.h"
+#include "video_core/renderer_opengl/gl_vars.h"
 #endif
 #include "libretro.h"
 
@@ -354,6 +355,15 @@ static void context_reset() {
     switch (Settings::values.graphics_api.GetValue()) {
 #ifdef ENABLE_OPENGL
     case Settings::GraphicsAPI::OpenGL:
+#if defined(USING_GLES)
+        Settings::values.use_gles = true;
+        // Set the global GLES flag immediately to ensure any shader compilation
+        // that happens before the Driver is created uses the correct version
+        OpenGL::GLES = true;
+#else
+        Settings::values.use_gles = false;
+        OpenGL::GLES = false;
+#endif
         // Check to see if the frontend provides us with OpenGL symbols
         if (emu_instance->hw_render.get_proc_address != nullptr) {
             bool loaded = Settings::values.use_gles

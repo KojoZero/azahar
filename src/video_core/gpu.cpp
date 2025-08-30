@@ -437,7 +437,13 @@ void GPU::RecreateRenderer(Frontend::EmuWindow& emu_window, Frontend::EmuWindow*
     // Update the sw_blitter with the new rasterizer
     impl->sw_blitter = std::make_unique<SwRenderer::SwBlitter>(impl->memory, impl->rasterizer);
 
-    LOG_INFO(HW_GPU, "Renderer recreated for context reset");
+    // Mark ALL GPU registers as dirty so current state gets uploaded to new renderer
+    impl->pica.dirty_regs.qwords.fill(~0ULL);
+
+    // Also mark all cached state in pica as dirty
+    impl->pica.lighting.lut_dirty = impl->pica.lighting.LutAllDirty;
+    impl->pica.fog.lut_dirty = true;
+    impl->pica.proctex.table_dirty = impl->pica.proctex.TableAllDirty;
 }
 
 void GPU::ReleaseRenderer() {
