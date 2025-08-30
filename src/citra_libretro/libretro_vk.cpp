@@ -604,14 +604,32 @@ Frame* PresentWindow::GetRenderFrame() {
         return nullptr;
     }
 
+    // RetroArch may not call context_reset during fullscreen toggle, leaving us
+    // with a stale interface pointer that can crash
+    const struct retro_hw_render_interface_vulkan* current_intf = nullptr;
+    if (!LibRetro::GetHWRenderInterface((void**)&current_intf) || !current_intf) {
+        LOG_ERROR(Render_Vulkan, "Failed to get current Vulkan interface");
+        return &frame_pool[current_frame_index];
+    }
+
+    // Update global interface if it changed
+    if (current_intf != vulkan_intf) {
+        LOG_INFO(Render_Vulkan, "Vulkan interface changed during runtime from {} to {}",
+                 static_cast<const void*>(vulkan_intf), static_cast<const void*>(current_intf));
+        vulkan_intf = current_intf;
+    }
+
     // LibRetro synchronization: Use LibRetro's wait mechanism instead of fences
-    if (vulkan_intf && vulkan_intf->wait_sync_index) {
+    if (vulkan_intf && vulkan_intf->wait_sync_index && vulkan_intf->handle) {
         vulkan_intf->wait_sync_index(vulkan_intf->handle);
     }
 
     // Use LibRetro's sync index for frame selection if available
     u32 frame_index = current_frame_index;
-    if (vulkan_intf && vulkan_intf->get_sync_index) {
+    if (vulkan_intf && vulkan_intf->get_sync_index && vulkan_intf->handle) {
+        LOG_TRACE(Render_Vulkan, "Calling get_sync_index with handle: {}",
+                  static_cast<void*>(vulkan_intf->handle));
+
         const u32 sync_index = vulkan_intf->get_sync_index(vulkan_intf->handle);
         frame_index = sync_index % frame_pool.size();
         LOG_TRACE(Render_Vulkan, "LibRetro sync index: {}, using frame: {}", sync_index,
@@ -665,10 +683,6 @@ void PresentWindow::Present(Frame* frame) {
     persistent_libretro_image.image_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     persistent_libretro_image.create_info =
         static_cast<VkImageViewCreateInfo>(output_view_create_info);
-
-    // CRITICAL: Following PPSSPP pattern - pass NO semaphores to set_image!
-    // RetroArch handles all synchronization through its own mechanisms
-    LOG_DEBUG(Render_Vulkan, "Submitting frame with no semaphores (RetroArch manages sync)");
 
     vulkan_intf->set_image(vulkan_intf->handle, &persistent_libretro_image, 0, nullptr,
                            instance.GetGraphicsQueueFamilyIndex());
