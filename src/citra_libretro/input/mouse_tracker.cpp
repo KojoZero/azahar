@@ -283,7 +283,7 @@ void MouseTracker::Render(int bufferWidth, int bufferHeight, void* framebuffer_d
 
     // Delegate to renderer-specific implementation
     if (cursor_renderer) {
-        cursor_renderer->Render(bufferWidth, bufferHeight, projectedX, projectedY, renderRatio,
+        cursor_renderer->Render(bufferWidth, bufferHeight,(int) projectedX, (int) projectedY, renderRatio,
                                 framebuffer_layout, framebuffer_data);
     }
 }
@@ -341,8 +341,8 @@ OpenGLCursorRenderer::~OpenGLCursorRenderer() {
     vbo.Release();
 }
 
-void OpenGLCursorRenderer::Render(int bufferWidth, int bufferHeight, float projectedX,
-                                  float projectedY, float renderRatio,
+void OpenGLCursorRenderer::Render(int bufferWidth, int bufferHeight, int projectedX,
+                                  int projectedY, float renderRatio,
                                   const Layout::FramebufferLayout& layout, void* framebuffer_data) {
     // Use shared coordinate calculation
     CursorCoordinates coords(bufferWidth, bufferHeight, projectedX, projectedY, renderRatio,
@@ -396,8 +396,8 @@ VulkanCursorRenderer::VulkanCursorRenderer() {
 
 VulkanCursorRenderer::~VulkanCursorRenderer() = default;
 
-void VulkanCursorRenderer::Render(int bufferWidth, int bufferHeight, float projectedX,
-                                  float projectedY, float renderRatio,
+void VulkanCursorRenderer::Render(int bufferWidth, int bufferHeight, int projectedX,
+                                  int projectedY, float renderRatio,
                                   const Layout::FramebufferLayout& layout, void* framebuffer_data) {
     // Use shared coordinate calculation
     CursorCoordinates coords(bufferWidth, bufferHeight, projectedX, projectedY, renderRatio,
@@ -422,8 +422,8 @@ SoftwareCursorRenderer::SoftwareCursorRenderer() {
 
 SoftwareCursorRenderer::~SoftwareCursorRenderer() = default;
 
-void SoftwareCursorRenderer::Render(int bufferWidth, int bufferHeight, float projectedX,
-                                    float projectedY, float renderRatio,
+void SoftwareCursorRenderer::Render(int bufferWidth, int bufferHeight, int projectedX,
+                                    int projectedY, float renderRatio,
                                     const Layout::FramebufferLayout& layout,
                                     void* framebuffer_data) {
     if (!framebuffer_data) {

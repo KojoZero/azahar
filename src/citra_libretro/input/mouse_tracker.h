@@ -18,7 +18,7 @@ namespace Input {
 class CursorRenderer {
 public:
     virtual ~CursorRenderer() = default;
-    virtual void Render(int bufferWidth, int bufferHeight, float projectedX, float projectedY,
+    virtual void Render(int bufferWidth, int bufferHeight, int projectedX, int projectedY,
                         float renderRatio, const Layout::FramebufferLayout& layout,
                         void* framebuffer_data = nullptr) = 0;
 };
@@ -75,7 +75,7 @@ class OpenGLCursorRenderer : public CursorRenderer {
 public:
     OpenGLCursorRenderer();
     ~OpenGLCursorRenderer();
-    void Render(int bufferWidth, int bufferHeight, float projectedX, float projectedY,
+    void Render(int bufferWidth, int bufferHeight, int projectedX, int projectedY,
                 float renderRatio, const Layout::FramebufferLayout& layout,
                 void* framebuffer_data = nullptr) override;
 
@@ -91,7 +91,7 @@ class VulkanCursorRenderer : public CursorRenderer {
 public:
     VulkanCursorRenderer();
     ~VulkanCursorRenderer();
-    void Render(int bufferWidth, int bufferHeight, float projectedX, float projectedY,
+    void Render(int bufferWidth, int bufferHeight, int projectedX, int projectedY,
                 float renderRatio, const Layout::FramebufferLayout& layout,
                 void* framebuffer_data = nullptr) override;
 };
@@ -101,7 +101,7 @@ class SoftwareCursorRenderer : public CursorRenderer {
 public:
     SoftwareCursorRenderer();
     ~SoftwareCursorRenderer();
-    void Render(int bufferWidth, int bufferHeight, float projectedX, float projectedY,
+    void Render(int bufferWidth, int bufferHeight, int projectedX, int projectedY,
                 float renderRatio, const Layout::FramebufferLayout& layout,
                 void* framebuffer_data = nullptr) override;
 };
