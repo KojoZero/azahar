@@ -216,6 +216,17 @@ void EmuWindow_LibRetro::UpdateLayout() {
         baseX *= scaling;
         baseY *= scaling;
         break;
+    case Settings::LayoutOption::CenteredLargeScreen:
+        if (swapped) { // Bottom screen biggest
+            baseX = (Core::kScreenBottomWidth * 4) + (2 * Core::kScreenTopWidth);
+            baseY = (Core::kScreenBottomHeight * 4);
+        } else { // Top screen biggest
+            baseX = (Core::kScreenTopWidth * 4) + (2 * Core::kScreenBottomWidth);
+            baseY = (Core::kScreenTopHeight * 4);
+        }
+        baseX *= scaling;
+        baseY *= scaling;
+        break;
     case Settings::LayoutOption::SideScreen:
         baseX = Core::kScreenBottomWidth + Core::kScreenTopWidth;
         baseY = Core::kScreenTopHeight;

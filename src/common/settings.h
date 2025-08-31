@@ -39,6 +39,7 @@ enum class LayoutOption : u32 {
     SingleScreen,
     LargeScreen,
     SideScreen,
+    CenteredLargeScreen,
 #ifndef ANDROID
     SeparateWindows,
 #endif

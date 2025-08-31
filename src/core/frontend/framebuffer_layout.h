@@ -109,6 +109,10 @@ FramebufferLayout SingleFrameLayout(u32 width, u32 height, bool is_swapped, bool
 FramebufferLayout LargeFrameLayout(u32 width, u32 height, bool is_swapped, bool upright,
                                    float scale_factor,
                                    Settings::SmallScreenPosition small_screen_position);
+
+FramebufferLayout CenteredLargeFrameLayout(u32 width, u32 height, bool is_swapped, bool upright,
+                                   float scale_factor,
+                                   Settings::SmallScreenPosition small_screen_position);
 /**
  * Factory method for constructing a frame with 2.5 times bigger top screen on the right,
  * and 1x top and bottom screen on the left

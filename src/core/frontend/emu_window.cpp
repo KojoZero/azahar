@@ -246,6 +246,13 @@ void EmuWindow::UpdateCurrentFramebufferLayout(u32 width, u32 height, bool is_po
                                          Settings::values.large_screen_proportion.GetValue(),
                                          Settings::values.small_screen_position.GetValue());
             break;
+        case Settings::LayoutOption::CenteredLargeScreen:
+            layout =
+                Layout::CenteredLargeFrameLayout(width, height, Settings::values.swap_screen.GetValue(),
+                                         Settings::values.upright_screen.GetValue(),
+                                         4,
+                                         Settings::SmallScreenPosition::MiddleRight);
+            break;
         case Settings::LayoutOption::HybridScreen:
             layout =
                 Layout::HybridScreenLayout(width, height, Settings::values.swap_screen.GetValue(),

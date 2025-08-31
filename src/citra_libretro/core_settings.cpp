@@ -443,6 +443,7 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
             { "default", "Default Top-Bottom" },
             { "single_screen", "Single Screen Only" },
             { "large_screen", "Large Screen, Small Screen" },
+            { "centered_large_screen", "Centered Large Screen" },
             { "side_by_side", "Side by Side" },
             { nullptr, nullptr }
         },
@@ -993,6 +994,8 @@ static Settings::LayoutOption GetLayoutOption(const std::string& name) {
         return Settings::LayoutOption::SingleScreen;
     if (name == "large_screen" || name == "Large Screen, Small Screen")
         return Settings::LayoutOption::LargeScreen;
+    if (name == "centered_large_screen" || name == "Centered Large Screen")
+        return Settings::LayoutOption::CenteredLargeScreen;
     if (name == "side_by_side" || name == "Side by Side")
         return Settings::LayoutOption::SideScreen;
     if (name == "default" || name == "Default Top-Bottom")

@@ -270,6 +270,87 @@ FramebufferLayout LargeFrameLayout(u32 width, u32 height, bool swapped, bool upr
     }
 }
 
+FramebufferLayout CenteredLargeFrameLayout(u32 width, u32 height, bool swapped, bool upright,
+                                   float scale_factor,
+                                   Settings::SmallScreenPosition small_screen_position) {
+    ASSERT(width > 0);
+    ASSERT(height > 0);
+    if (upright) {
+        std::swap(width, height);
+    }
+    const bool vertical = (small_screen_position == Settings::SmallScreenPosition::AboveLarge ||
+                           small_screen_position == Settings::SmallScreenPosition::BelowLarge);
+    FramebufferLayout res{width, height, true, true, {}, {}, !upright};
+    // Split the window into two parts. Give proportional width to the smaller screen
+    // To do that, find the total emulation box and maximize that based on window size
+    u32 gap = (u32)(Settings::values.screen_gap.GetValue() * scale_factor);
+
+    float large_height =
+        swapped ? Core::kScreenBottomHeight * scale_factor : Core::kScreenTopHeight * scale_factor;
+    float small_height =
+        static_cast<float>(swapped ? Core::kScreenTopHeight : Core::kScreenBottomHeight);
+    float large_width =
+        swapped ? Core::kScreenBottomWidth * scale_factor : Core::kScreenTopWidth * scale_factor;
+    float small_width =
+        static_cast<float>(swapped ? Core::kScreenTopWidth : Core::kScreenBottomWidth);
+
+    float emulation_width;
+    float emulation_height;
+    if (vertical) {
+        // width is just the larger size at this point
+        emulation_width = std::max(large_width, small_width);
+        emulation_height = large_height + small_height + gap;
+    } else {
+        emulation_width = large_width + (2 * small_width) + gap;
+        emulation_height = std::max(large_height, small_height);
+    }
+
+    const float window_aspect_ratio = static_cast<float>(height) / static_cast<float>(width);
+    const float emulation_aspect_ratio = emulation_height / emulation_width;
+
+    Common::Rectangle<u32> screen_window_area{0, 0, width, height};
+    Common::Rectangle<u32> total_rect = MaxRectangle(screen_window_area, emulation_aspect_ratio);
+    // TODO: Wtf does this `scale_amount` value represent? -OS
+    const float scale_amount = static_cast<float>(total_rect.GetHeight()) / emulation_height;
+    gap = static_cast<u32>(static_cast<float>(gap) * scale_amount);
+
+    Common::Rectangle<u32> large_screen =
+        Common::Rectangle<u32>{total_rect.left, total_rect.top,
+                               static_cast<u32>(large_width * scale_amount + total_rect.left),
+                               static_cast<u32>(large_height * scale_amount + total_rect.top)};
+    Common::Rectangle<u32> small_screen =
+        Common::Rectangle<u32>{total_rect.left, total_rect.top,
+                               static_cast<u32>(small_width * scale_amount + total_rect.left),
+                               static_cast<u32>(small_height * scale_amount + total_rect.top)};
+
+    if (window_aspect_ratio < emulation_aspect_ratio) {
+        // shift the large screen so it is at the left position of the bounding rectangle
+        large_screen = large_screen.TranslateX((width - total_rect.GetWidth()) / 2);
+    } else {
+        // shift the large screen so it is at the top position of the bounding rectangle
+        large_screen = large_screen.TranslateY((height - total_rect.GetHeight()) / 2);
+    }
+        large_screen = large_screen.TranslateX(static_cast<u32>(small_width * scale_amount));
+    switch (small_screen_position) {
+    case Settings::SmallScreenPosition::MiddleRight:
+        // Shift the small screen to the center right
+        small_screen = small_screen.TranslateX(large_screen.right + gap);
+        small_screen = small_screen.TranslateY(
+            ((large_screen.GetHeight() - small_screen.GetHeight()) / 2) + large_screen.top);
+        break;
+    default:
+        UNREACHABLE();
+        break;
+    }
+    res.top_screen = swapped ? small_screen : large_screen;
+    res.bottom_screen = swapped ? large_screen : small_screen;
+    if (upright) {
+        return reverseLayout(res);
+    } else {
+        return res;
+    }
+}
+
 FramebufferLayout HybridScreenLayout(u32 width, u32 height, bool swapped, bool upright) {
     ASSERT(width > 0);
     ASSERT(height > 0);
