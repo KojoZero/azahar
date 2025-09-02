@@ -72,5 +72,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR
     CMAKE_SYSTEM_NAME STREQUAL "tvOS")
   target_link_libraries(azahar_libretro PRIVATE "-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libretro.osx.def")
 else()
-  target_link_libraries(azahar_libretro PRIVATE "-Wl,-Bsymbolic")
+  if(NOT WIN32)
+      target_link_options(azahar_libretro PRIVATE "-Wl,-Bsymbolic")
+  endif()
 endif()
