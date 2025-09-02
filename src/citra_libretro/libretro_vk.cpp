@@ -15,6 +15,8 @@
 #include "common/logging/log.h"
 #include "common/settings.h"
 #include "core/frontend/emu_window.h"
+#include "video_core/custom_textures/custom_format.h"
+#include "video_core/rasterizer_cache/surface_base.h"
 #include "video_core/renderer_vulkan/vk_scheduler.h"
 
 #include <vk_mem_alloc.h>
@@ -36,6 +38,105 @@ void VulkanResetContext() {
 } // namespace LibRetro
 
 namespace Vulkan {
+
+namespace {
+
+vk::Format MakeFormat(VideoCore::PixelFormat format) {
+    switch (format) {
+    case VideoCore::PixelFormat::RGBA8:
+        return vk::Format::eR8G8B8A8Unorm;
+    case VideoCore::PixelFormat::RGB8:
+        return vk::Format::eB8G8R8Unorm;
+    case VideoCore::PixelFormat::RGB5A1:
+        return vk::Format::eR5G5B5A1UnormPack16;
+    case VideoCore::PixelFormat::RGB565:
+        return vk::Format::eR5G6B5UnormPack16;
+    case VideoCore::PixelFormat::RGBA4:
+        return vk::Format::eR4G4B4A4UnormPack16;
+    case VideoCore::PixelFormat::D16:
+        return vk::Format::eD16Unorm;
+    case VideoCore::PixelFormat::D24:
+        return vk::Format::eX8D24UnormPack32;
+    case VideoCore::PixelFormat::D24S8:
+        return vk::Format::eD24UnormS8Uint;
+    case VideoCore::PixelFormat::Invalid:
+        LOG_ERROR(Render_Vulkan, "Unknown texture format {}!", format);
+        return vk::Format::eUndefined;
+    default:
+        return vk::Format::eR8G8B8A8Unorm; ///< Use default case for the texture formats
+    }
+}
+
+vk::Format MakeCustomFormat(VideoCore::CustomPixelFormat format) {
+    switch (format) {
+    case VideoCore::CustomPixelFormat::RGBA8:
+        return vk::Format::eR8G8B8A8Unorm;
+    case VideoCore::CustomPixelFormat::BC1:
+        return vk::Format::eBc1RgbaUnormBlock;
+    case VideoCore::CustomPixelFormat::BC3:
+        return vk::Format::eBc3UnormBlock;
+    case VideoCore::CustomPixelFormat::BC5:
+        return vk::Format::eBc5UnormBlock;
+    case VideoCore::CustomPixelFormat::BC7:
+        return vk::Format::eBc7UnormBlock;
+    case VideoCore::CustomPixelFormat::ASTC4:
+        return vk::Format::eAstc4x4UnormBlock;
+    case VideoCore::CustomPixelFormat::ASTC6:
+        return vk::Format::eAstc6x6UnormBlock;
+    case VideoCore::CustomPixelFormat::ASTC8:
+        return vk::Format::eAstc8x6UnormBlock;
+    default:
+        LOG_ERROR(Render_Vulkan, "Unknown custom format {}", format);
+    }
+    return vk::Format::eR8G8B8A8Unorm;
+}
+
+vk::Format MakeAttributeFormat(Pica::PipelineRegs::VertexAttributeFormat format, u32 count,
+                               bool scaled = true) {
+    static constexpr std::array attrib_formats_scaled = {
+        vk::Format::eR8Sscaled,        vk::Format::eR8G8Sscaled,
+        vk::Format::eR8G8B8Sscaled,    vk::Format::eR8G8B8A8Sscaled,
+        vk::Format::eR8Uscaled,        vk::Format::eR8G8Uscaled,
+        vk::Format::eR8G8B8Uscaled,    vk::Format::eR8G8B8A8Uscaled,
+        vk::Format::eR16Sscaled,       vk::Format::eR16G16Sscaled,
+        vk::Format::eR16G16B16Sscaled, vk::Format::eR16G16B16A16Sscaled,
+        vk::Format::eR32Sfloat,        vk::Format::eR32G32Sfloat,
+        vk::Format::eR32G32B32Sfloat,  vk::Format::eR32G32B32A32Sfloat,
+    };
+    static constexpr std::array attrib_formats_int = {
+        vk::Format::eR8Sint,          vk::Format::eR8G8Sint,
+        vk::Format::eR8G8B8Sint,      vk::Format::eR8G8B8A8Sint,
+        vk::Format::eR8Uint,          vk::Format::eR8G8Uint,
+        vk::Format::eR8G8B8Uint,      vk::Format::eR8G8B8A8Uint,
+        vk::Format::eR16Sint,         vk::Format::eR16G16Sint,
+        vk::Format::eR16G16B16Sint,   vk::Format::eR16G16B16A16Sint,
+        vk::Format::eR32Sfloat,       vk::Format::eR32G32Sfloat,
+        vk::Format::eR32G32B32Sfloat, vk::Format::eR32G32B32A32Sfloat,
+    };
+
+    const u32 index = static_cast<u32>(format);
+    return (scaled ? attrib_formats_scaled : attrib_formats_int)[index * 4 + count - 1];
+}
+
+vk::ImageAspectFlags MakeAspect(VideoCore::SurfaceType type) {
+    switch (type) {
+    case VideoCore::SurfaceType::Color:
+    case VideoCore::SurfaceType::Texture:
+    case VideoCore::SurfaceType::Fill:
+        return vk::ImageAspectFlagBits::eColor;
+    case VideoCore::SurfaceType::Depth:
+        return vk::ImageAspectFlagBits::eDepth;
+    case VideoCore::SurfaceType::DepthStencil:
+        return vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
+    default:
+        LOG_CRITICAL(Render_Vulkan, "Invalid surface type {}", type);
+        UNREACHABLE();
+    }
+
+    return vk::ImageAspectFlagBits::eColor;
+}
+
+} // Anonymous namespace
 
 std::shared_ptr<Common::DynamicLibrary> OpenLibrary(
     [[maybe_unused]] Frontend::GraphicsContext* context) {
@@ -202,12 +303,15 @@ void LibRetroVKInstance::DetectExtensionSupport() {
     shader_stencil_export = has_extension(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
     external_memory_host = has_extension(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
 
-    // Apply MoltenVK workarounds - fragment shader barycentric uses PerVertexKHR which isn't
-    // supported in MSL
+    // Apply MoltenVK workarounds
     if (driver_id == vk::DriverIdKHR::eMoltenvk) {
         LOG_INFO(Render_Vulkan, "Disabling fragment_shader_barycentric on MoltenVK (PerVertexKHR "
                                 "not supported in MSL)");
         fragment_shader_barycentric = false;
+
+        LOG_INFO(Render_Vulkan, "Disabling index_type_uint8 on MoltenVK (uint8 index conversion "
+                                "causes memory leaks)");
+        index_type_uint8 = false;
     }
 
     LOG_DEBUG(Render_Vulkan, "Detected {} device extensions", available_extensions.size());
@@ -256,7 +360,6 @@ void LibRetroVKInstance::DetectDeviceCapabilities() {
 
     // Additional validation: Check if timeline semaphore functions are actually loaded
     if (timeline_semaphores) {
-        const vk::Device device = vk::Device{vulkan_intf->device};
         try {
             // Test if the function pointer is actually available
             if (!VULKAN_HPP_DEFAULT_DISPATCHER.vkGetSemaphoreCounterValueKHR) {
@@ -325,6 +428,195 @@ void LibRetroVKInstance::DetectDeviceCapabilities() {
     LOG_INFO(Render_Vulkan, "Timeline semaphores final status: {}", timeline_semaphores);
     LOG_INFO(Render_Vulkan, "Extended dynamic state final status: {}", extended_dynamic_state);
     LOG_DEBUG(Render_Vulkan, "Device capabilities detected successfully");
+}
+
+void LibRetroVKInstance::CreateFormatTable() {
+    constexpr std::array pixel_formats = {
+        VideoCore::PixelFormat::RGBA8,  VideoCore::PixelFormat::RGB8,
+        VideoCore::PixelFormat::RGB5A1, VideoCore::PixelFormat::RGB565,
+        VideoCore::PixelFormat::RGBA4,  VideoCore::PixelFormat::IA8,
+        VideoCore::PixelFormat::RG8,    VideoCore::PixelFormat::I8,
+        VideoCore::PixelFormat::A8,     VideoCore::PixelFormat::IA4,
+        VideoCore::PixelFormat::I4,     VideoCore::PixelFormat::A4,
+        VideoCore::PixelFormat::ETC1,   VideoCore::PixelFormat::ETC1A4,
+        VideoCore::PixelFormat::D16,    VideoCore::PixelFormat::D24,
+        VideoCore::PixelFormat::D24S8,
+    };
+
+    for (const auto& pixel_format : pixel_formats) {
+        const vk::Format format = MakeFormat(pixel_format);
+        FormatTraits traits = DetermineTraits(pixel_format, format);
+
+        const bool is_suitable =
+            traits.transfer_support && traits.attachment_support &&
+            (traits.blit_support || traits.aspect & vk::ImageAspectFlagBits::eDepth);
+
+        // Fall back if the native format is not suitable.
+        if (!is_suitable) {
+            // Always fallback to RGBA8 or D32(S8) for convenience
+            auto fallback = vk::Format::eR8G8B8A8Unorm;
+            if (traits.aspect & vk::ImageAspectFlagBits::eDepth) {
+                fallback = vk::Format::eD32Sfloat;
+                if (traits.aspect & vk::ImageAspectFlagBits::eStencil) {
+                    fallback = vk::Format::eD32SfloatS8Uint;
+                }
+            }
+            LOG_WARNING(Render_Vulkan, "Format {} unsupported, falling back unconditionally to {}",
+                        vk::to_string(format), vk::to_string(fallback));
+            traits = DetermineTraits(pixel_format, fallback);
+            // Always requires conversion if backing format does not match.
+            traits.needs_conversion = true;
+        }
+
+        const u32 index = static_cast<u32>(pixel_format);
+        format_table[index] = traits;
+    }
+
+    LOG_DEBUG(Render_Vulkan, "LibRetro format table initialized with {} formats",
+              pixel_formats.size());
+}
+
+FormatTraits LibRetroVKInstance::DetermineTraits(VideoCore::PixelFormat pixel_format,
+                                                 vk::Format format) {
+    const vk::ImageAspectFlags format_aspect = MakeAspect(VideoCore::GetFormatType(pixel_format));
+    const vk::FormatProperties format_properties = physical_device.getFormatProperties(format);
+
+    const vk::FormatFeatureFlagBits attachment_usage =
+        (format_aspect & vk::ImageAspectFlagBits::eDepth)
+            ? vk::FormatFeatureFlagBits::eDepthStencilAttachment
+            : vk::FormatFeatureFlagBits::eColorAttachmentBlend;
+
+    const vk::FormatFeatureFlags storage_usage = vk::FormatFeatureFlagBits::eStorageImage;
+    const vk::FormatFeatureFlags transfer_usage = vk::FormatFeatureFlagBits::eSampledImage;
+    const vk::FormatFeatureFlags blit_usage =
+        vk::FormatFeatureFlagBits::eBlitSrc | vk::FormatFeatureFlagBits::eBlitDst;
+
+    const bool supports_transfer =
+        (format_properties.optimalTilingFeatures & transfer_usage) == transfer_usage;
+    const bool supports_blit = (format_properties.optimalTilingFeatures & blit_usage) == blit_usage;
+    const bool supports_attachment =
+        (format_properties.optimalTilingFeatures & attachment_usage) == attachment_usage &&
+        pixel_format != VideoCore::PixelFormat::RGB8;
+    const bool supports_storage =
+        (format_properties.optimalTilingFeatures & storage_usage) == storage_usage;
+    const bool needs_conversion =
+        // Requires component flip.
+        pixel_format == VideoCore::PixelFormat::RGBA8 ||
+        // Requires (de)interleaving.
+        pixel_format == VideoCore::PixelFormat::D24S8;
+
+    // Find the most inclusive usage flags for this format
+    vk::ImageUsageFlags best_usage{};
+    if (supports_blit || supports_transfer) {
+        best_usage |= vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst |
+                      vk::ImageUsageFlagBits::eTransferSrc;
+    }
+    // Attachment flag is only needed for color and depth formats.
+    if (supports_attachment &&
+        VideoCore::GetFormatType(pixel_format) != VideoCore::SurfaceType::Texture) {
+        best_usage |= (format_aspect & vk::ImageAspectFlagBits::eDepth)
+                          ? vk::ImageUsageFlagBits::eDepthStencilAttachment
+                          : vk::ImageUsageFlagBits::eColorAttachment;
+    }
+    // Storage flag is only needed for shadow rendering with RGBA8 texture.
+    // Keeping it disables can boost performance on mobile drivers.
+    if (supports_storage && pixel_format == VideoCore::PixelFormat::RGBA8) {
+        best_usage |= vk::ImageUsageFlagBits::eStorage;
+    }
+
+    return FormatTraits{
+        .transfer_support = supports_transfer,
+        .blit_support = supports_blit,
+        .attachment_support = supports_attachment,
+        .storage_support = supports_storage,
+        .needs_conversion = needs_conversion,
+        .usage = best_usage,
+        .aspect = format_aspect,
+        .native = format,
+    };
+}
+
+void LibRetroVKInstance::CreateCustomFormatTable() {
+    // The traits are the same for RGBA8
+    custom_format_table[0] = format_table[static_cast<u32>(VideoCore::PixelFormat::RGBA8)];
+
+    constexpr std::array custom_formats = {
+        VideoCore::CustomPixelFormat::BC1,   VideoCore::CustomPixelFormat::BC3,
+        VideoCore::CustomPixelFormat::BC5,   VideoCore::CustomPixelFormat::BC7,
+        VideoCore::CustomPixelFormat::ASTC4, VideoCore::CustomPixelFormat::ASTC6,
+        VideoCore::CustomPixelFormat::ASTC8,
+    };
+
+    for (const auto& custom_format : custom_formats) {
+        const vk::Format format = MakeCustomFormat(custom_format);
+        const vk::FormatProperties format_properties = physical_device.getFormatProperties(format);
+
+        // Compressed formats don't support blit_dst in general so just check for transfer
+        const vk::FormatFeatureFlags transfer_usage = vk::FormatFeatureFlagBits::eSampledImage;
+        const bool supports_transfer =
+            (format_properties.optimalTilingFeatures & transfer_usage) == transfer_usage;
+
+        vk::ImageUsageFlags best_usage{};
+        if (supports_transfer) {
+            best_usage |= vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst |
+                          vk::ImageUsageFlagBits::eTransferSrc;
+        }
+
+        const u32 index = static_cast<u32>(custom_format);
+        custom_format_table[index] = FormatTraits{
+            .transfer_support = supports_transfer,
+            .usage = best_usage,
+            .aspect = vk::ImageAspectFlagBits::eColor,
+            .native = format,
+        };
+    }
+}
+
+void LibRetroVKInstance::DetermineEmulation(Pica::PipelineRegs::VertexAttributeFormat format,
+                                            bool& needs_cast) {
+    // Check if (u)scaled formats can be used to emulate the 3 component format
+    vk::Format four_comp_format = MakeAttributeFormat(format, 4);
+    vk::FormatProperties format_properties = physical_device.getFormatProperties(four_comp_format);
+    needs_cast = !(format_properties.bufferFeatures & vk::FormatFeatureFlagBits::eVertexBuffer);
+}
+
+void LibRetroVKInstance::CreateAttribTable() {
+    constexpr std::array attrib_formats = {
+        Pica::PipelineRegs::VertexAttributeFormat::BYTE,
+        Pica::PipelineRegs::VertexAttributeFormat::UBYTE,
+        Pica::PipelineRegs::VertexAttributeFormat::SHORT,
+        Pica::PipelineRegs::VertexAttributeFormat::FLOAT,
+    };
+
+    for (const auto& format : attrib_formats) {
+        for (u32 count = 1; count <= 4; count++) {
+            bool needs_cast{false};
+            bool needs_emulation{false};
+            vk::Format attrib_format = MakeAttributeFormat(format, count);
+            vk::FormatProperties format_properties =
+                physical_device.getFormatProperties(attrib_format);
+            if (!(format_properties.bufferFeatures & vk::FormatFeatureFlagBits::eVertexBuffer)) {
+                needs_cast = true;
+                attrib_format = MakeAttributeFormat(format, count, false);
+                format_properties = physical_device.getFormatProperties(attrib_format);
+                if (!(format_properties.bufferFeatures &
+                      vk::FormatFeatureFlagBits::eVertexBuffer)) {
+                    ASSERT_MSG(
+                        count == 3,
+                        "Vertex attribute emulation is only supported for 3 component formats");
+                    DetermineEmulation(format, needs_cast);
+                    needs_emulation = true;
+                }
+            }
+
+            const u32 index = static_cast<u32>(format) * 4 + count - 1;
+            attrib_table[index] = FormatTraits{
+                .needs_conversion = needs_cast,
+                .needs_emulation = needs_emulation,
+                .native = attrib_format,
+            };
+        }
+    }
 }
 
 // ============================================================================
@@ -420,10 +712,10 @@ void PresentWindow::CreateOutputTexture(u32 width, u32 height) {
         .initialLayout = vk::ImageLayout::eUndefined,
     };
 
-    // Create image with VMA
+    // Create image with VMA - using budget-aware allocation like standalone version
     VmaAllocationCreateInfo alloc_info = {};
-    alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    alloc_info.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+    alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+    alloc_info.flags = VMA_ALLOCATION_CREATE_WITHIN_BUDGET_BIT;
 
     VkImage vk_image;
     const VkResult result = vmaCreateImage(instance.GetAllocator(),

@@ -46,6 +46,19 @@ private:
 
     /// Detects device capabilities and features
     void DetectDeviceCapabilities();
+
+    /// Creates the format compatibility table for the current device
+    void CreateFormatTable();
+    void CreateCustomFormatTable();
+
+    /// Creates the attribute format table for the current device
+    void CreateAttribTable();
+
+    /// Determines the best available vertex attribute format emulation
+    void DetermineEmulation(Pica::PipelineRegs::VertexAttributeFormat format, bool& needs_cast);
+
+    /// Returns the optimal supported usage for the requested format
+    FormatTraits DetermineTraits(VideoCore::PixelFormat pixel_format, vk::Format format);
 };
 
 class Scheduler;
@@ -128,7 +141,7 @@ private:
 private:
     Frontend::EmuWindow& emu_window;
     const Instance& instance;
-    Scheduler& scheduler;
+    [[maybe_unused]] Scheduler& scheduler;
 
     // LibRetro output texture (replaces swapchain)
     vk::Image output_image{};

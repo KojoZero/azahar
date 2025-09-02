@@ -464,7 +464,9 @@ bool Instance::CreateDevice() {
     const bool has_custom_border_color =
         add_extension(VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME, is_qualcomm,
                       "it is broken on most Qualcomm driver versions");
-    const bool has_index_type_uint8 = add_extension(VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME);
+    const bool has_index_type_uint8 =
+        add_extension(VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME, is_moltenvk,
+                      "uint8 index conversion causes memory leaks in MoltenVK");
     const bool has_fragment_shader_interlock =
         add_extension(VK_EXT_FRAGMENT_SHADER_INTERLOCK_EXTENSION_NAME, is_nvidia,
                       "it is broken on Nvidia drivers");
