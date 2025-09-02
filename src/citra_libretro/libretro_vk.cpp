@@ -107,7 +107,8 @@ LibRetroVKInstance::LibRetroVKInstance(Frontend::EmuWindow& window,
     CreateDevice(true);
 
     // LibRetro-specific: Validate function pointers are actually available
-    // LibRetro's device may not have loaded all extension functions even if extensions are available
+    // LibRetro's device may not have loaded all extension functions even if extensions are
+    // available
     if (extended_dynamic_state) {
         if (!VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdSetCullModeEXT ||
             !VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdSetDepthTestEnableEXT ||
