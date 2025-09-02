@@ -159,7 +159,7 @@ Instance::Instance(Frontend::EmuWindow& window, u32 physical_device_index)
             VK_VERSION_MAJOR(properties.apiVersion), VK_VERSION_MINOR(properties.apiVersion)));
     }
 
-    CreateDevice();
+    CreateDevice(false);
     CreateFormatTable();
     CollectToolingInfo();
     CreateCustomFormatTable();
@@ -394,7 +394,7 @@ void Instance::CreateAttribTable() {
     }
 }
 
-bool Instance::CreateDevice() {
+bool Instance::CreateDevice(bool libretro) {
     const vk::StructureChain feature_chain = physical_device.getFeatures2<
         vk::PhysicalDeviceFeatures2, vk::PhysicalDevicePortabilitySubsetFeaturesKHR,
         vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT,
@@ -483,8 +483,8 @@ bool Instance::CreateDevice() {
         return false;
     }
 
-    bool graphics_queue_found = false;
-    for (std::size_t i = 0; i < family_properties.size(); i++) {
+    bool graphics_queue_found = libretro;
+    for (std::size_t i = 0; !libretro && i < family_properties.size(); i++) {
         const u32 index = static_cast<u32>(i);
         if (family_properties[i].queueFlags & vk::QueueFlagBits::eGraphics) {
             queue_family_index = index;
@@ -613,6 +613,10 @@ bool Instance::CreateDevice() {
 
 #undef PROP_GET
 #undef FEAT_SET
+
+    if (libretro) {
+        return true;
+    }
 
     try {
         device = physical_device.createDeviceUnique(device_chain.get());

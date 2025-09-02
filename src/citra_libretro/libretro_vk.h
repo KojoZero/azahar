@@ -36,29 +36,6 @@ public:
 
     /// Returns the Vulkan device
     vk::Device GetDevice() const override;
-
-private:
-    /// Initializes vendor-specific information
-    void InitializeVendorInfo();
-
-    /// Detects supported Vulkan extensions
-    void DetectExtensionSupport();
-
-    /// Detects device capabilities and features
-    void DetectDeviceCapabilities();
-
-    /// Creates the format compatibility table for the current device
-    void CreateFormatTable();
-    void CreateCustomFormatTable();
-
-    /// Creates the attribute format table for the current device
-    void CreateAttribTable();
-
-    /// Determines the best available vertex attribute format emulation
-    void DetermineEmulation(Pica::PipelineRegs::VertexAttributeFormat format, bool& needs_cast);
-
-    /// Returns the optimal supported usage for the requested format
-    FormatTraits DetermineTraits(VideoCore::PixelFormat pixel_format, vk::Format format);
 };
 
 class Scheduler;

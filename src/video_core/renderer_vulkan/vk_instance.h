@@ -287,7 +287,7 @@ protected:
     void CreateAttribTable();
 
     /// Creates the logical device opportunistically enabling extensions
-    virtual bool CreateDevice();
+    bool CreateDevice(bool libretro);
 
     /// Creates the VMA allocator handle
     void CreateAllocator();
