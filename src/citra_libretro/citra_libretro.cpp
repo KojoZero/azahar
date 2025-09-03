@@ -12,6 +12,7 @@
 
 #ifdef ENABLE_OPENGL
 #include "glad/glad.h"
+#include "video_core/renderer_opengl/gl_vars.h"
 #endif
 #include "libretro.h"
 
@@ -403,9 +404,19 @@ static void* load_opengl_func(const char* name) {
 
 static void context_reset() {
     LOG_DEBUG(Frontend, "context_reset");
+
     switch (Settings::values.graphics_api.GetValue()) {
 #ifdef ENABLE_OPENGL
     case Settings::GraphicsAPI::OpenGL:
+#if defined(USING_GLES)
+        Settings::values.use_gles = true;
+        // Set the global GLES flag immediately to ensure any shader compilation
+        // that happens before the Driver is created uses the correct version
+        OpenGL::GLES = true;
+#else
+        Settings::values.use_gles = false;
+        OpenGL::GLES = false;
+#endif
         // Check to see if the frontend provides us with OpenGL symbols
         if (emu_instance->hw_render.get_proc_address != nullptr) {
             bool loaded = Settings::values.use_gles
@@ -437,12 +448,27 @@ static void context_reset() {
 
     emu_instance->emu_window->CreateContext();
 
-    if (!emu_instance->game_loaded)
+    if (!emu_instance->game_loaded) {
         emu_instance->game_loaded = do_load_game();
+    } else {
+        // Game is already loaded, just recreate the renderer for the new GL context
+        if (Settings::values.graphics_api.GetValue() == Settings::GraphicsAPI::OpenGL) {
+            Core::System::GetInstance().GPU().RecreateRenderer(*emu_instance->emu_window, nullptr);
+            if (Settings::values.use_disk_shader_cache) {
+                Core::System::GetInstance().GPU().Renderer().Rasterizer()->LoadDefaultDiskResources(
+                    false, nullptr);
+            }
+        }
+    }
 }
 
 static void context_destroy() {
     LOG_DEBUG(Frontend, "context_destroy");
+    if (emu_instance->game_loaded &&
+        Settings::values.graphics_api.GetValue() == Settings::GraphicsAPI::OpenGL) {
+        // Release the renderer's OpenGL resources
+        Core::System::GetInstance().GPU().ReleaseRenderer();
+    }
     emu_instance->emu_window->DestroyContext();
 }
 

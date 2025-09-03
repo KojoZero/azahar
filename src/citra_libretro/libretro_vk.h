@@ -36,16 +36,6 @@ public:
 
     /// Returns the Vulkan device
     vk::Device GetDevice() const override;
-
-private:
-    /// Initializes vendor-specific information
-    void InitializeVendorInfo();
-
-    /// Detects supported Vulkan extensions
-    void DetectExtensionSupport();
-
-    /// Detects device capabilities and features
-    void DetectDeviceCapabilities();
 };
 
 class Scheduler;
@@ -128,7 +118,7 @@ private:
 private:
     Frontend::EmuWindow& emu_window;
     const Instance& instance;
-    Scheduler& scheduler;
+    [[maybe_unused]] Scheduler& scheduler;
 
     // LibRetro output texture (replaces swapchain)
     vk::Image output_image{};
@@ -149,6 +139,10 @@ private:
 
     // Vulkan objects
     vk::Queue graphics_queue{};
+
+    // Persistent LibRetro image descriptor, must persist across frames for RetroArch frame duping
+    // during pause
+    retro_vulkan_image persistent_libretro_image{};
 };
 
 } // namespace Vulkan

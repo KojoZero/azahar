@@ -83,10 +83,12 @@ LibRetroVKInstance::LibRetroVKInstance(Frontend::EmuWindow& window,
 
     // Get device properties and features
     properties = physical_device.getProperties();
-    features = physical_device.getFeatures();
 
-    // Initialize vendor information
-    InitializeVendorInfo();
+    const std::vector extensions = physical_device.enumerateDeviceExtensionProperties();
+    available_extensions.reserve(extensions.size());
+    for (const auto& extension : extensions) {
+        available_extensions.emplace_back(extension.extensionName.data());
+    }
 
     // Get queues from LibRetro
     graphics_queue = vulkan_intf->queue;
@@ -101,11 +103,30 @@ LibRetroVKInstance::LibRetroVKInstance(Frontend::EmuWindow& window,
     // Initialize Vulkan HPP dispatcher with LibRetro's device
     VULKAN_HPP_DEFAULT_DISPATCHER.init(vk::Device{vulkan_intf->device});
 
-    // Detect extension support
-    DetectExtensionSupport();
+    // Now run device capability detection with dispatcher initialized
+    CreateDevice(true);
 
-    // Detect device capabilities
-    DetectDeviceCapabilities();
+    // LibRetro-specific: Validate function pointers are actually available
+    // LibRetro's device may not have loaded all extension functions even if extensions are
+    // available
+    if (extended_dynamic_state) {
+        if (!VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdSetCullModeEXT ||
+            !VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdSetDepthTestEnableEXT ||
+            !VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdSetDepthWriteEnableEXT ||
+            !VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdSetFrontFaceEXT) {
+            LOG_WARNING(Render_Vulkan, "Extended dynamic state function pointers not available in "
+                                       "LibRetro context, disabling");
+            extended_dynamic_state = false;
+        }
+    }
+
+    if (timeline_semaphores) {
+        if (!VULKAN_HPP_DEFAULT_DISPATCHER.vkGetSemaphoreCounterValueKHR) {
+            LOG_WARNING(Render_Vulkan, "Timeline semaphore function pointers not available in "
+                                       "LibRetro context, disabling");
+            timeline_semaphores = false;
+        }
+    }
 
     // Initialize subsystems
     CreateAllocator();
@@ -125,206 +146,6 @@ vk::Instance LibRetroVKInstance::GetInstance() const {
 
 vk::Device LibRetroVKInstance::GetDevice() const {
     return vk::Device{vulkan_intf->device};
-}
-
-// Helper methods for LibRetroVKInstance
-void LibRetroVKInstance::InitializeVendorInfo() {
-    const u32 vendor_id = properties.vendorID;
-    switch (vendor_id) {
-    case 0x1002:
-        vendor_name = "AMD";
-        break;
-    case 0x10DE:
-        vendor_name = "NVIDIA";
-        break;
-    case 0x8086:
-        vendor_name = "Intel";
-        break;
-    case 0x1010:
-        vendor_name = "ImgTec";
-        break;
-    case 0x13B5:
-        vendor_name = "ARM";
-        break;
-    case 0x5143:
-        vendor_name = "Qualcomm";
-        break;
-    case 0x1AE0:
-        vendor_name = "Google";
-        break;
-    default:
-        vendor_name = fmt::format("Unknown (0x{:X})", vendor_id);
-        break;
-    }
-
-    // Get driver ID if available
-    try {
-        const vk::PhysicalDeviceDriverProperties driver_props =
-            physical_device
-                .getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceDriverProperties>()
-                .get<vk::PhysicalDeviceDriverProperties>();
-        driver_id = driver_props.driverID;
-    } catch (const vk::SystemError& e) {
-        LOG_WARNING(Render_Vulkan, "Failed to query driver properties: {}", e.what());
-        driver_id = {};
-    }
-}
-
-void LibRetroVKInstance::DetectExtensionSupport() {
-    // Get available device extensions
-    const std::vector<vk::ExtensionProperties> extensions =
-        physical_device.enumerateDeviceExtensionProperties();
-    available_extensions.clear();
-    available_extensions.reserve(extensions.size());
-
-    for (const auto& extension : extensions) {
-        available_extensions.emplace_back(extension.extensionName.data());
-    }
-
-    // Check for important extensions
-    auto has_extension = [&](const char* name) {
-        return std::find(available_extensions.begin(), available_extensions.end(), name) !=
-               available_extensions.end();
-    };
-
-    timeline_semaphores = has_extension(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
-    LOG_DEBUG(Render_Vulkan, "Timeline semaphore extension available: {}", timeline_semaphores);
-    extended_dynamic_state = has_extension(VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME);
-    LOG_DEBUG(Render_Vulkan, "Extended dynamic state extension available: {}",
-              extended_dynamic_state);
-    custom_border_color = has_extension(VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME);
-    index_type_uint8 = has_extension(VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME);
-    fragment_shader_interlock = has_extension(VK_EXT_FRAGMENT_SHADER_INTERLOCK_EXTENSION_NAME);
-    image_format_list = has_extension(VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME);
-    pipeline_creation_cache_control =
-        has_extension(VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME);
-    fragment_shader_barycentric = has_extension(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME);
-    shader_stencil_export = has_extension(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
-    external_memory_host = has_extension(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
-
-    // Apply MoltenVK workarounds - fragment shader barycentric uses PerVertexKHR which isn't
-    // supported in MSL
-    if (driver_id == vk::DriverIdKHR::eMoltenvk) {
-        LOG_INFO(Render_Vulkan, "Disabling fragment_shader_barycentric on MoltenVK (PerVertexKHR "
-                                "not supported in MSL)");
-        fragment_shader_barycentric = false;
-    }
-
-    LOG_DEBUG(Render_Vulkan, "Detected {} device extensions", available_extensions.size());
-}
-
-void LibRetroVKInstance::DetectDeviceCapabilities() {
-    // Query extended features if available
-    vk::PhysicalDeviceFeatures2 features2;
-    vk::PhysicalDeviceTimelineSemaphoreFeatures timeline_features;
-    vk::PhysicalDeviceVulkan12Features vulkan12_features;
-
-    // Chain the feature structures
-    void* pNext = nullptr;
-
-    // Check for layered rendering support on MoltenVK (maps to shaderOutputLayer)
-    if (driver_id == vk::DriverIdKHR::eMoltenvk) {
-        vulkan12_features.pNext = pNext;
-        pNext = &vulkan12_features;
-    }
-
-    if (timeline_semaphores) {
-        timeline_features.pNext = pNext;
-        pNext = &timeline_features;
-    }
-
-    features2.pNext = pNext;
-
-    try {
-        physical_device.getFeatures2(&features2);
-        if (timeline_semaphores) {
-            timeline_semaphores = timeline_features.timelineSemaphore;
-        }
-
-        // Check layered rendering support on MoltenVK
-        // MoltenVK maps _metalFeatures.layeredRendering to _vulkan12FeaturesNoExt.shaderOutputLayer
-        if (driver_id == vk::DriverIdKHR::eMoltenvk) {
-            if (!vulkan12_features.shaderOutputLayer) {
-                LOG_INFO(Render_Vulkan,
-                         "Disabling layered rendering (shaderOutputLayer not supported by device)");
-                layered_rendering_supported = false;
-            }
-        }
-    } catch (const vk::SystemError& e) {
-        LOG_WARNING(Render_Vulkan, "Failed to query extended features: {}", e.what());
-    }
-
-    // Additional validation: Check if timeline semaphore functions are actually loaded
-    if (timeline_semaphores) {
-        const vk::Device device = vk::Device{vulkan_intf->device};
-        try {
-            // Test if the function pointer is actually available
-            if (!VULKAN_HPP_DEFAULT_DISPATCHER.vkGetSemaphoreCounterValueKHR) {
-                LOG_WARNING(
-                    Render_Vulkan,
-                    "Timeline semaphore extension reported but function not loaded, disabling");
-                timeline_semaphores = false;
-            }
-        } catch (const std::exception& e) {
-            LOG_WARNING(Render_Vulkan,
-                        "Timeline semaphore function validation failed: {}, disabling", e.what());
-            timeline_semaphores = false;
-        }
-    }
-
-    // Additional validation: Check if extended dynamic state functions are actually loaded
-    if (extended_dynamic_state) {
-        try {
-            // Test if setCullModeEXT function pointer is actually available
-            if (!VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdSetCullModeEXT) {
-                LOG_WARNING(Render_Vulkan, "Extended dynamic state extension reported but "
-                                           "setCullModeEXT not loaded, disabling");
-                extended_dynamic_state = false;
-            } else {
-                // Also check other critical EXT functions used by the pipeline cache
-                if (!VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdSetDepthTestEnableEXT ||
-                    !VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdSetDepthWriteEnableEXT ||
-                    !VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdSetFrontFaceEXT) {
-                    LOG_WARNING(Render_Vulkan, "Extended dynamic state extension missing some "
-                                               "function pointers, disabling");
-                    extended_dynamic_state = false;
-                }
-            }
-        } catch (const std::exception& e) {
-            LOG_WARNING(Render_Vulkan,
-                        "Extended dynamic state function validation failed: {}, disabling",
-                        e.what());
-            extended_dynamic_state = false;
-        }
-    }
-
-    // Get memory properties for external memory
-    if (external_memory_host) {
-        try {
-            vk::PhysicalDeviceExternalMemoryHostPropertiesEXT memory_host_props;
-            vk::PhysicalDeviceProperties2 props2;
-            props2.pNext = &memory_host_props;
-            physical_device.getProperties2(&props2);
-            min_imported_host_pointer_alignment = memory_host_props.minImportedHostPointerAlignment;
-        } catch (const vk::SystemError& e) {
-            LOG_WARNING(Render_Vulkan, "Failed to query memory host properties: {}", e.what());
-            external_memory_host = false;
-        }
-    }
-
-    // Triangle fan support (assume supported unless proven otherwise)
-    triangle_fan_supported = true;
-
-    // Detect minimum vertex stride alignment
-    min_vertex_stride_alignment = 1;
-    if (properties.limits.minTexelBufferOffsetAlignment > 1) {
-        min_vertex_stride_alignment =
-            static_cast<u32>(properties.limits.minTexelBufferOffsetAlignment);
-    }
-
-    LOG_INFO(Render_Vulkan, "Timeline semaphores final status: {}", timeline_semaphores);
-    LOG_INFO(Render_Vulkan, "Extended dynamic state final status: {}", extended_dynamic_state);
-    LOG_DEBUG(Render_Vulkan, "Device capabilities detected successfully");
 }
 
 // ============================================================================
@@ -420,10 +241,10 @@ void PresentWindow::CreateOutputTexture(u32 width, u32 height) {
         .initialLayout = vk::ImageLayout::eUndefined,
     };
 
-    // Create image with VMA
+    // Create image with VMA - using budget-aware allocation like standalone version
     VmaAllocationCreateInfo alloc_info = {};
-    alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    alloc_info.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+    alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+    alloc_info.flags = VMA_ALLOCATION_CREATE_WITHIN_BUDGET_BIT;
 
     VkImage vk_image;
     const VkResult result = vmaCreateImage(instance.GetAllocator(),
@@ -604,14 +425,32 @@ Frame* PresentWindow::GetRenderFrame() {
         return nullptr;
     }
 
+    // RetroArch may not call context_reset during fullscreen toggle, leaving us
+    // with a stale interface pointer that can crash
+    const struct retro_hw_render_interface_vulkan* current_intf = nullptr;
+    if (!LibRetro::GetHWRenderInterface((void**)&current_intf) || !current_intf) {
+        LOG_ERROR(Render_Vulkan, "Failed to get current Vulkan interface");
+        return &frame_pool[current_frame_index];
+    }
+
+    // Update global interface if it changed
+    if (current_intf != vulkan_intf) {
+        LOG_INFO(Render_Vulkan, "Vulkan interface changed during runtime from {} to {}",
+                 static_cast<const void*>(vulkan_intf), static_cast<const void*>(current_intf));
+        vulkan_intf = current_intf;
+    }
+
     // LibRetro synchronization: Use LibRetro's wait mechanism instead of fences
-    if (vulkan_intf && vulkan_intf->wait_sync_index) {
+    if (vulkan_intf && vulkan_intf->wait_sync_index && vulkan_intf->handle) {
         vulkan_intf->wait_sync_index(vulkan_intf->handle);
     }
 
     // Use LibRetro's sync index for frame selection if available
     u32 frame_index = current_frame_index;
-    if (vulkan_intf && vulkan_intf->get_sync_index) {
+    if (vulkan_intf && vulkan_intf->get_sync_index && vulkan_intf->handle) {
+        LOG_TRACE(Render_Vulkan, "Calling get_sync_index with handle: {}",
+                  static_cast<void*>(vulkan_intf->handle));
+
         const u32 sync_index = vulkan_intf->get_sync_index(vulkan_intf->handle);
         frame_index = sync_index % frame_pool.size();
         LOG_TRACE(Render_Vulkan, "LibRetro sync index: {}, using frame: {}", sync_index,
@@ -659,19 +498,14 @@ void PresentWindow::Present(Frame* frame) {
         return;
     }
 
-    // Create LibRetro image descriptor using the actual create info
-    struct retro_vulkan_image libretro_image = {};
-    libretro_image.image_view = static_cast<VkImageView>(frame->image_view);
-    libretro_image.image_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    // CRITICAL: Use persistent struct to avoid stack lifetime issues!
+    // RetroArch may cache this pointer for frame duping during pause
+    persistent_libretro_image.image_view = static_cast<VkImageView>(frame->image_view);
+    persistent_libretro_image.image_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    persistent_libretro_image.create_info =
+        static_cast<VkImageViewCreateInfo>(output_view_create_info);
 
-    // Use the exact create info that was used to create the image view
-    libretro_image.create_info = static_cast<VkImageViewCreateInfo>(output_view_create_info);
-
-    // CRITICAL: Following PPSSPP pattern - pass NO semaphores to set_image!
-    // RetroArch handles all synchronization through its own mechanisms
-    LOG_DEBUG(Render_Vulkan, "Submitting frame with no semaphores (RetroArch manages sync)");
-
-    vulkan_intf->set_image(vulkan_intf->handle, &libretro_image, 0, nullptr,
+    vulkan_intf->set_image(vulkan_intf->handle, &persistent_libretro_image, 0, nullptr,
                            instance.GetGraphicsQueueFamilyIndex());
 
     // Call EmuWindow SwapBuffers to trigger LibRetro video frame submission
