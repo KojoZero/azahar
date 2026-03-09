@@ -29,7 +29,7 @@
      <item>
       <spacer name="horizontalSpacer_2">
        <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>
@@ -68,13 +68,21 @@
       <bool>true</bool>
      </property>
      <widget class="QWidget" name="scrollAreaContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>-188</y>
+        <width>407</width>
+        <height>802</height>
+       </rect>
+      </property>
       <layout class="QVBoxLayout" name="verticalLayout_5">
        <item>
         <layout class="QGridLayout" name="gridLayout_7">
          <item row="2" column="0">
           <widget class="QGroupBox" name="faceButtons_3">
            <property name="title">
-            <string>Shoulder Buttons</string>
+            <string>Shoulder Buttons/Cursor Modifier</string>
            </property>
            <property name="flat">
             <bool>false</bool>
@@ -88,7 +96,7 @@
               <item>
                <widget class="QLabel" name="label_18">
                 <property name="text">
-                 <string>ZR:</string>
+                 <string>ZR/Touch Screen:</string>
                 </property>
                </widget>
               </item>
@@ -124,7 +132,7 @@
               <item>
                <widget class="QLabel" name="label_20">
                 <property name="text">
-                 <string>ZL:</string>
+                 <string>ZL/Cursor Boost:</string>
                 </property>
                </widget>
               </item>
@@ -572,7 +580,7 @@
               <item>
                <layout class="QHBoxLayout" name="sliderCirclePadDeadzoneAndModifierHorizontalLayout">
                 <property name="sizeConstraint">
-                 <enum>QLayout::SetDefaultConstraint</enum>
+                 <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
                 </property>
                 <item>
                  <widget class="QLabel" name="labelCirclePadDeadzoneAndModifier">
@@ -580,7 +588,7 @@
                    <string>Deadzone: 0</string>
                   </property>
                   <property name="alignment">
-                   <set>Qt::AlignHCenter</set>
+                   <set>Qt::AlignmentFlag::AlignHCenter</set>
                   </property>
                  </widget>
                 </item>
@@ -589,7 +597,7 @@
               <item>
                <widget class="QSlider" name="sliderCirclePadDeadzoneAndModifier">
                 <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
+                 <enum>Qt::Orientation::Horizontal</enum>
                 </property>
                </widget>
               </item>
@@ -634,25 +642,25 @@
             <item row="4" column="1" colspan="2">
              <layout class="QVBoxLayout" name="verticalLayout_38">
               <property name="sizeConstraint">
-               <enum>QLayout::SetDefaultConstraint</enum>
+               <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
               </property>
               <item>
                <widget class="QLabel" name="label_14">
                 <property name="layoutDirection">
-                 <enum>Qt::LeftToRight</enum>
+                 <enum>Qt::LayoutDirection::LeftToRight</enum>
                 </property>
                 <property name="text">
                  <string>Diagonals</string>
                 </property>
                 <property name="alignment">
-                 <set>Qt::AlignCenter</set>
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="Line" name="line">
                 <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
+                 <enum>Qt::Orientation::Horizontal</enum>
                 </property>
                </widget>
               </item>
@@ -697,7 +705,7 @@
             <item row="14" column="1" colspan="2">
              <widget class="Line" name="line_3">
               <property name="orientation">
-               <enum>Qt::Horizontal</enum>
+               <enum>Qt::Orientation::Horizontal</enum>
               </property>
              </widget>
             </item>
@@ -707,7 +715,7 @@
          <item row="1" column="1">
           <widget class="QGroupBox" name="faceButtons_5">
            <property name="title">
-            <string>C-Stick</string>
+            <string>C-Stick/Cursor</string>
            </property>
            <property name="flat">
             <bool>false</bool>
@@ -868,14 +876,14 @@
                  <string>Diagonals</string>
                 </property>
                 <property name="alignment">
-                 <set>Qt::AlignCenter</set>
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="Line" name="line_2">
                 <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
+                 <enum>Qt::Orientation::Horizontal</enum>
                 </property>
                </widget>
               </item>
@@ -884,7 +892,7 @@
             <item row="9" column="0" colspan="2">
              <layout class="QVBoxLayout" name="sliderCStickDeadzoneAndModifierVerticalLayout">
               <property name="sizeConstraint">
-               <enum>QLayout::SetDefaultConstraint</enum>
+               <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
               </property>
               <item>
                <layout class="QHBoxLayout" name="sliderCStickDeadzoneAndModifierHorizontalLayout">
@@ -894,7 +902,7 @@
                    <string>Deadzone: 0</string>
                   </property>
                   <property name="alignment">
-                   <set>Qt::AlignHCenter</set>
+                   <set>Qt::AlignmentFlag::AlignHCenter</set>
                   </property>
                  </widget>
                 </item>
@@ -903,7 +911,7 @@
               <item>
                <widget class="QSlider" name="sliderCStickDeadzoneAndModifier">
                 <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
+                 <enum>Qt::Orientation::Horizontal</enum>
                 </property>
                </widget>
               </item>
@@ -919,7 +927,7 @@
             <item row="7" column="0" colspan="2">
              <widget class="Line" name="line_4">
               <property name="orientation">
-               <enum>Qt::Horizontal</enum>
+               <enum>Qt::Orientation::Horizontal</enum>
               </property>
              </widget>
             </item>
@@ -957,7 +965,7 @@
           </size>
          </property>
          <property name="layoutDirection">
-          <enum>Qt::LeftToRight</enum>
+          <enum>Qt::LayoutDirection::LeftToRight</enum>
          </property>
          <property name="text">
           <string>Motion / Touch...</string>
@@ -985,7 +993,7 @@
           </size>
          </property>
          <property name="layoutDirection">
-          <enum>Qt::LeftToRight</enum>
+          <enum>Qt::LayoutDirection::LeftToRight</enum>
          </property>
          <property name="text">
           <string>Auto Map</string>
@@ -1013,7 +1021,7 @@
           </size>
          </property>
          <property name="layoutDirection">
-          <enum>Qt::LeftToRight</enum>
+          <enum>Qt::LayoutDirection::LeftToRight</enum>
          </property>
          <property name="text">
           <string>Clear All</string>
@@ -1041,7 +1049,7 @@
           </size>
          </property>
          <property name="layoutDirection">
-          <enum>Qt::LeftToRight</enum>
+          <enum>Qt::LayoutDirection::LeftToRight</enum>
          </property>
          <property name="text">
           <string>Restore Defaults</string>
