@@ -133,6 +133,8 @@ add_library(citra_qt STATIC EXCLUDE_FROM_ALL
     dumping/options_dialog.cpp
     dumping/options_dialog.h
     dumping/options_dialog.ui
+    input/cursor.cpp
+    input/cursor.h
     game_list.cpp
     game_list.h
     game_list_p.h
@@ -192,6 +194,7 @@ add_library(citra_qt STATIC EXCLUDE_FROM_ALL
     util/spinbox.h
     util/util.cpp
     util/util.h
+    input/cursor.cpp
 )
 
 target_include_directories(citra_qt PUBLIC ${CMAKE_BINARY_DIR}/src)
