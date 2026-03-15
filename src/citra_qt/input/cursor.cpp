@@ -22,8 +22,8 @@ void Cursor::UpdateTouchPosition(){
 void Cursor::UpdateRenderPosition(int minX, int minY, int maxX, int maxY){
     pixelWidth = (maxX - minX)/320.0f; //Calculate how wide a 3ds pixel is in terms of current layout
     pixelHeight = (maxY - minY)/240.0f; //Calculate how tall a 3ds pixel is in terms of current layout
-    xRenderPos = (xTouchPos*pixelWidth)+minX;
-    yRenderPos = (yTouchPos*pixelHeight)+minY;
+    xRenderPos = (std::floor(xPos)*pixelWidth)+minX;
+    yRenderPos = (std::floor(yPos)*pixelHeight)+minY;
 }
 
 void Cursor::Render(){
@@ -59,15 +59,17 @@ void Cursor::Render(){
     Cursor::DrawBlackPixel(xRenderPos+(1*pixelWidth), yRenderPos-(2*pixelHeight));
 }
 
-void DrawBlackPixel(float x, float y){
-//painter.fillRect((int) x,(int)y,(int) pixelWidth, (int)pixelHeight, Qt::black)
+void Cursor::DrawBlackPixel(float x, float y){
+    painter->fillRect((int) x,(int)y,(int) pixelWidth, (int)pixelHeight, Qt::black);
 }
 
-void DrawWhitePixel(float x, float y){
- //painter.fillRect((int) x,(int)y,(int) pixelWidth, (int)pixelHeight, Qt::white)
+void Cursor::DrawWhitePixel(float x, float y){
+    painter->fillRect((int) x,(int)y,(int) pixelWidth, (int)pixelHeight, Qt::white);
 }
 
-
+void Cursor::setPainter(QPainter* newPainter){
+    painter = newPainter;
+}
 bool Cursor::GetIsPressed(){
 
 }
