@@ -1,61 +1,43 @@
 #pragma once
-#include <QPainter>
-#include <QPixmap>
 #include "core/frontend/framebuffer_layout.h"
-#include "common/logging/log.h"
+
 class Cursor {
 public:
-    //Clamp the cursor position within touchscreen boundaries
+    // Clamp the cursor position within touchscreen boundaries
     void Restrict();
 
-    //The main function that calls the other ones
+    // The main function that calls the other ones
     void Update();
 
-    //Move the cursor in terms of fractional 3ds coordinates
+    // Move the cursor in terms of fractional 3ds coordinates
     void Move(float deltaX, float deltaY);
 
-    //Calculate the render position of cursor for current layout.
-    void UpdateRenderPosition();
-
-    //Calculate the touch position of cursor in coordinates for emu_window
+    // Calculate the touch position of cursor in coordinates for emu_window
     void UpdateTouchPosition();
 
-    //Draw the cursor on screen using the current render position coordinates as the center
-    void Render();
-
-    void DrawBlackPixel(int offsetX, int offsetY);
-
-    void DrawWhitePixel(int offsetX, int offsetY);
-
-    //Return whether touchscreen is being pressed
+    // Return whether touchscreen is being pressed
     bool GetIsPressed();
 
-    void SetPainter(QPainter* newPainter);
-
-    void SetLayout(Layout::FramebufferLayout* newLayout);
+    void SetLayout(const Layout::FramebufferLayout* newLayout);
 
     unsigned GetXTouchPos();
-
     unsigned GetYTouchPos();
+
+    // Get cursor position in 3DS coordinates (0-319, 0-239)
+    float GetXPos() const;
+    float GetYPos() const;
+
 private:
-    //Cursor Coordinates in terms of fractional 3ds coordinates
-    float xPos;
-    float yPos;
+    // Cursor coordinates in 3DS coordinates
+    float xPos = 0;
+    float yPos = 0;
 
-    //Cursor Coordinates mapped to 3ds internal coordinates
-    unsigned xTouchPos;
-    unsigned yTouchPos;
+    // Cursor coordinates mapped to 3DS internal coordinates
+    unsigned xTouchPos = 0;
+    unsigned yTouchPos = 0;
 
-    //Cursor Coordinates mapped to layout coordinates and snapped to grid for draw. The value represents the bottom left of the rendered center pixel
-    float xRenderPos;
-    float yRenderPos;
+    // Whether touchscreen is pressed
+    bool isPressed = false;
 
-    float pixelHeight;
-    float pixelWidth;
-
-    //Whether touchscreen is pressed
-    bool isPressed;
-
-    QPainter* painter;
-    const Layout::FramebufferLayout* layout;
+    const Layout::FramebufferLayout* layout = nullptr;
 };

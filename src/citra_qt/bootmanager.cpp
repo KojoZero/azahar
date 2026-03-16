@@ -35,6 +35,7 @@
 // clang-format on
 #include <QOffscreenSurface>
 #include <QOpenGLContext>
+#include "video_core/renderer_opengl/gl_resource_manager.h"
 #endif
 
 #if defined(__APPLE__)
@@ -275,8 +276,6 @@ public:
 #ifdef ENABLE_OPENGL
 class OpenGLRenderWidget : public RenderWidget {
 public:
-    Cursor* cursor = new Cursor();
-
     explicit OpenGLRenderWidget(GRenderWindow* parent, Core::System& system_, bool is_secondary)
         : RenderWidget(parent), system(system_), is_secondary(is_secondary) {
         setAttribute(Qt::WA_NativeWindow);
@@ -291,6 +290,91 @@ public:
         context = std::move(context_);
     }
 
+    void InitCursorGL() {
+        const bool use_gles = Settings::values.use_gles.GetValue();
+        const std::string precision = use_gles ? "precision mediump float;\n" : "";
+
+        const std::string vert = precision + R"(
+            in vec2 position;
+            void main() { gl_Position = vec4(position, 0.0, 1.0); }
+        )";
+        const std::string frag = precision + R"(
+            out vec4 color;
+            void main() { color = vec4(1.0, 1.0, 1.0, 1.0); }
+        )";
+
+        cursor_vao.Create();
+        cursor_vbo.Create();
+        cursor_shader.Create(vert.c_str(), frag.c_str());
+
+        glBindVertexArray(cursor_vao.handle);
+        glBindBuffer(GL_ARRAY_BUFFER, cursor_vbo.handle);
+        const auto pos_loc =
+            static_cast<GLuint>(glGetAttribLocation(cursor_shader.handle, "position"));
+        glEnableVertexAttribArray(pos_loc);
+        glVertexAttribPointer(pos_loc, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+        glBindVertexArray(0);
+
+        cursor_gl_initialized = true;
+    }
+
+    void RenderCursorGL() {
+        if (!cursor_gl_initialized) {
+            InitCursorGL();
+        }
+
+        const auto info = curr_window->GetCursorInfo();
+        if (!info.visible) return;
+
+        const auto& layout = curr_window->GetFramebufferLayout();
+        const float buf_w = static_cast<float>(layout.width);
+        const float buf_h = static_cast<float>(layout.height);
+        const float abs_x = layout.bottom_screen.left + info.projected_x;
+        const float abs_y = layout.bottom_screen.top + info.projected_y;
+        const float ratio = static_cast<float>(layout.bottom_screen.GetHeight()) / 30.0f;
+
+        // Convert to screen-NDC (x: -1 to 1, y: -1 at top to 1 at bottom)
+        const float cx = (abs_x / buf_w) * 2.0f - 1.0f;
+        const float cy = (abs_y / buf_h) * 2.0f - 1.0f;
+        const float rw = ratio / buf_w;
+        const float rh = ratio / buf_h;
+
+        const float bl = (layout.bottom_screen.left / buf_w) * 2.0f - 1.0f;
+        const float bt = (layout.bottom_screen.top / buf_h) * 2.0f - 1.0f;
+        const float br = (layout.bottom_screen.right / buf_w) * 2.0f - 1.0f;
+        const float bb = (layout.bottom_screen.bottom / buf_h) * 2.0f - 1.0f;
+
+        // Vertical bar — negate Y to flip from screen-NDC to true OpenGL NDC
+        const float vl = std::fmax(cx - rw / 5.0f, bl);
+        const float vr = std::fmin(cx + rw / 5.0f, br);
+        const float vt = -std::fmax(cy - rh, bt);
+        const float vb = -std::fmin(cy + rh, bb);
+
+        // Horizontal bar
+        const float hl = std::fmax(cx - rw, bl);
+        const float hr = std::fmin(cx + rw, br);
+        const float ht = -std::fmax(cy - rh / 5.0f, bt);
+        const float hb = -std::fmin(cy + rh / 5.0f, bb);
+
+        const GLfloat vertices[] = {
+            vl, vt, vr, vt, vr, vb, vl, vt, vr, vb, vl, vb,
+            hl, ht, hr, ht, hr, hb, hl, ht, hr, hb, hl, hb,
+        };
+
+        glUseProgram(cursor_shader.handle);
+        glBindVertexArray(cursor_vao.handle);
+        glBindBuffer(GL_ARRAY_BUFFER, cursor_vbo.handle);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE_MINUS_SRC_COLOR);
+        glDrawArrays(GL_TRIANGLES, 0, 12);
+
+        glBindVertexArray(0);
+        glUseProgram(0);
+        glDisable(GL_BLEND);
+    }
+
     void Present() {
         if (!isVisible()) {
             return;
@@ -301,18 +385,13 @@ public:
         context->MakeCurrent();
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         system.GPU().Renderer().TryPresent(100, is_secondary);
+        glViewport(0, 0, width(), height());
+        RenderCursorGL();
         context->SwapBuffers();
         glFinish();
     }
 
     void paintEvent(QPaintEvent* event) override {
-        QPainter cursorPainter(this);
-        cursor->SetPainter(&cursorPainter);
-        cursor->SetLayout((Layout::FramebufferLayout*)&curr_window->GetFramebufferLayout());
-        //cursor->Update();
-        if (cursor->GetIsPressed()){
-            curr_window->TouchPressed(cursor->GetXTouchPos(), cursor->GetXTouchPos());
-        }
         Present();
         update();
     }
@@ -325,6 +404,11 @@ private:
     std::unique_ptr<Frontend::GraphicsContext> context{};
     Core::System& system;
     bool is_secondary;
+
+    OpenGL::OGLProgram cursor_shader;
+    OpenGL::OGLVertexArray cursor_vao;
+    OpenGL::OGLBuffer cursor_vbo;
+    bool cursor_gl_initialized = false;
 };
 #endif
 
@@ -456,6 +540,7 @@ GRenderWindow::GRenderWindow(QWidget* parent_, EmuThread* emu_thread_, Core::Sys
                              bool is_secondary_)
     : QWidget(parent_), EmuWindow(is_secondary_), emu_thread(emu_thread_), system{system_} {
 
+    cursor = new Cursor();
     setAttribute(Qt::WA_AcceptTouchEvents);
     auto layout = new QHBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -484,6 +569,16 @@ void GRenderWindow::PollEvents() {
         first_frame = true;
         emit FirstFrameDisplayed();
     }
+    cursor->Update();
+}
+
+Frontend::EmuWindow::CursorInfo GRenderWindow::GetCursorInfo() const {
+    const auto& layout = GetFramebufferLayout();
+    const float w = static_cast<float>(layout.bottom_screen.GetWidth());
+    const float h = static_cast<float>(layout.bottom_screen.GetHeight());
+    const float projected_x = cursor->GetXPos() * (w / 320.0f);
+    const float projected_y = cursor->GetYPos() * (h / 240.0f);
+    return {true, projected_x, projected_y};
 }
 
 // On Qt 5.0+, this correctly gets the size of the framebuffer (pixels).
@@ -498,6 +593,7 @@ void GRenderWindow::OnFramebufferSizeChanged() {
     const u32 width = static_cast<u32>(this->width() * pixel_ratio);
     const u32 height = static_cast<u32>(this->height() * pixel_ratio);
     UpdateCurrentFramebufferLayout(width, height);
+    cursor->SetLayout(&GetFramebufferLayout());
 }
 
 void GRenderWindow::BackupGeometry() {
