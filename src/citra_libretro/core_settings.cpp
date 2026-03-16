@@ -72,8 +72,8 @@ static constexpr const char* swap_screen = citra_setting(BaseKeys::swap_screen);
 static constexpr const char* swap_screen_mode = citra_setting(BaseKeys::swap_screen_mode);
 static constexpr const char* large_screen_proportion =
     citra_setting(BaseKeys::large_screen_proportion);
-} // namespace layout
 static constexpr const char* small_screen_position = citra_setting(BaseKeys::small_screen_position);
+} // namespace layout
 
 
 namespace storage {
@@ -85,6 +85,9 @@ static constexpr const char* use_libretro_save_path =
 namespace input {
 static constexpr const char* analog_function = citra_setting(BaseKeys::analog_function);
 static constexpr const char* analog_deadzone = citra_setting(BaseKeys::analog_deadzone);
+static constexpr const char* maxspeed = citra_setting(BaseKeys::maxspeed);
+static constexpr const char* responsecurve = citra_setting(BaseKeys::responsecurve);
+static constexpr const char* speedupratio = citra_setting(BaseKeys::speedupratio);
 static constexpr const char* enable_mouse_touchscreen =
     citra_setting(BaseKeys::enable_mouse_touchscreen);
 static constexpr const char* enable_touch_touchscreen =

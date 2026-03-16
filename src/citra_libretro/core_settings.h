@@ -9,7 +9,7 @@
 
 namespace LibRetro {
 
-enum CStickFunction { Both, CStick, Touchscreen };
+enum CStickFunction { Both, CStick, Touchscreen, Toggle};
 
 enum AnalogToggleState{ ToggledMain, ToggledAlternate};
 

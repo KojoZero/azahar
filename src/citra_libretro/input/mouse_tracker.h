@@ -68,6 +68,7 @@ private:
 
     float projectedX;
     float projectedY;
+    float renderRatio;
 
     bool isPressed;
 

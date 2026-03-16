@@ -116,12 +116,12 @@ MouseTracker::MouseTracker() {
 
 MouseTracker::~MouseTracker() = default;
 
-void MouseTracker::OnMouseMove(int deltaX, int deltaY) {
+void MouseTracker::OnMouseMove(float deltaX, float deltaY) {
     x += deltaX;
     y += deltaY;
 }
 
-void MouseTracker::Restrict(int minX, int minY, int maxX, int maxY) {
+void MouseTracker::Restrict(float minX, float minY, float maxX, float maxY) {
     x = std::clamp(x, minX, maxX);
     y = std::clamp(y, minY, maxY);
 }
@@ -232,7 +232,7 @@ void MouseTracker::Update(int bufferWidth, int bufferHeight,
             ((float)LibRetro::CheckInput(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT,
                                          RETRO_DEVICE_ID_ANALOG_Y) /
              INT16_MAX);
-        float deadzone = LibRetro::settings.deadzone;
+        float deadzone = LibRetro::settings.analog_deadzone;
         bool speedup_enabled = LibRetro::settings.speedup_enabled;
         float responsecurve = LibRetro::settings.responsecurve;
         float speedupratio = LibRetro::settings.speedupratio;
@@ -347,8 +347,8 @@ OpenGLCursorRenderer::~OpenGLCursorRenderer() {
     vbo.Release();
 }
 
-void OpenGLCursorRenderer::Render(int bufferWidth, int bufferHeight, float projectedX,
-                                  float projectedY, float renderRatio,
+void OpenGLCursorRenderer::Render(int bufferWidth, int bufferHeight, int projectedX,
+                                  int projectedY, float renderRatio,
                                   const Layout::FramebufferLayout& layout, void* framebuffer_data) {
     // Use shared coordinate calculation
     CursorCoordinates coords(bufferWidth, bufferHeight, projectedX, projectedY, renderRatio,
@@ -399,7 +399,7 @@ void OpenGLCursorRenderer::Render(int bufferWidth, int bufferHeight, float proje
 // This class exists only to satisfy the CursorRenderer interface.
 VulkanCursorRenderer::VulkanCursorRenderer() = default;
 VulkanCursorRenderer::~VulkanCursorRenderer() = default;
-void VulkanCursorRenderer::Render(int, int, float, float, float, const Layout::FramebufferLayout&,
+void VulkanCursorRenderer::Render(int, int, int, int, float, const Layout::FramebufferLayout&,
                                   void*) {}
 #endif
 
@@ -410,8 +410,8 @@ SoftwareCursorRenderer::SoftwareCursorRenderer() {
 
 SoftwareCursorRenderer::~SoftwareCursorRenderer() = default;
 
-void SoftwareCursorRenderer::Render(int bufferWidth, int bufferHeight, float projectedX,
-                                    float projectedY, float renderRatio,
+void SoftwareCursorRenderer::Render(int bufferWidth, int bufferHeight, int projectedX,
+                                    int projectedY, float renderRatio,
                                     const Layout::FramebufferLayout& layout,
                                     void* framebuffer_data) {
     if (!framebuffer_data) {
