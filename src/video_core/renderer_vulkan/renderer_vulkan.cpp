@@ -187,7 +187,9 @@ void RendererVulkan::PrepareRendertarget() {
 }
 
 void RendererVulkan::PrepareDraw(Frame* frame, const Layout::FramebufferLayout& layout) {
-    const auto sampler = present_samplers[!Settings::values.filter_mode.GetValue()];
+    const bool use_linear_filter = Settings::values.filter_mode.GetValue();
+    draw_info.linear_filter = use_linear_filter ? 1 : 0;
+    const auto sampler = present_samplers[!use_linear_filter];
     const auto present_set = present_heap.Commit();
     for (u32 index = 0; index < screen_infos.size(); index++) {
         update_queue.AddImageSampler(present_set, 0, index, screen_infos[index].image_view,
