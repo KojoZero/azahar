@@ -19,14 +19,15 @@ void Cursor::Update() {
     Cursor::UpdateTouchPosition();
 }
 
+//NEEDS TO BE FIXED
 void Cursor::UpdateTouchPosition() {
-    if (!layout) return;
-    xTouchPos = static_cast<unsigned>(std::round(
-        (((xPos + 1) / 320) * (layout->bottom_screen.right - layout->bottom_screen.left)) +
-        layout->bottom_screen.left));
-    yTouchPos = static_cast<unsigned>(std::round(
-        (((yPos + 1) / 240) * (layout->bottom_screen.top - layout->bottom_screen.bottom)) +
-        layout->bottom_screen.bottom));
+    // if (!layout) return;
+    // xTouchPos = static_cast<unsigned>(std::round(
+    //     (((xPos + 1) / 320) * (layout->bottom_screen.right - layout->bottom_screen.left)) +
+    //     layout->bottom_screen.left));
+    // yTouchPos = static_cast<unsigned>(std::round(
+    //     (((yPos + 1) / 240) * (layout->bottom_screen.top - layout->bottom_screen.bottom)) +
+    //     layout->bottom_screen.bottom));
 }
 
 void Cursor::SetLayout(const Layout::FramebufferLayout* newLayout) {
