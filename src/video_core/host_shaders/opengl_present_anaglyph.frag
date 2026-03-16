@@ -24,9 +24,56 @@ layout(binding = 1) uniform sampler2D color_texture_r;
 
 uniform vec4 resolution;
 uniform int layer;
+uniform int linear_filter;
+
+// sRGB <-> linear transfer functions for gamma-correct linear filtering
+float srgbToLinear(float c) {
+    return c <= 0.04045 ? c * (1.0 / 12.92) : pow((c + 0.055) * (1.0 / 1.055), 2.4);
+}
+
+vec3 srgbToLinear(vec3 c) {
+    return vec3(srgbToLinear(c.r), srgbToLinear(c.g), srgbToLinear(c.b));
+}
+
+float linearToSrgb(float c) {
+    return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1.0 / 2.4) - 0.055;
+}
+
+vec3 linearToSrgb(vec3 c) {
+    return vec3(linearToSrgb(c.r), linearToSrgb(c.g), linearToSrgb(c.b));
+}
+
+// Bilinear filtering with gamma-correct interpolation (sRGB -> linear -> blend -> sRGB)
+vec4 GammaCorrectSample(sampler2D tex, vec2 uv) {
+    ivec2 size = textureSize(tex, 0);
+    vec2 texel_pos = uv * vec2(size) - 0.5;
+    vec2 frac_part = fract(texel_pos);
+    ivec2 base = ivec2(floor(texel_pos));
+    ivec2 s = size - ivec2(1);
+
+    vec4 c00 = texelFetch(tex, clamp(base,                ivec2(0), s), 0);
+    vec4 c10 = texelFetch(tex, clamp(base + ivec2(1, 0),  ivec2(0), s), 0);
+    vec4 c01 = texelFetch(tex, clamp(base + ivec2(0, 1),  ivec2(0), s), 0);
+    vec4 c11 = texelFetch(tex, clamp(base + ivec2(1, 1),  ivec2(0), s), 0);
+
+    c00.rgb = srgbToLinear(c00.rgb);
+    c10.rgb = srgbToLinear(c10.rgb);
+    c01.rgb = srgbToLinear(c01.rgb);
+    c11.rgb = srgbToLinear(c11.rgb);
+
+    vec4 result = mix(mix(c00, c10, frac_part.x), mix(c01, c11, frac_part.x), frac_part.y);
+    result.rgb = linearToSrgb(result.rgb);
+    return result;
+}
 
 void main() {
-    vec4 color_tex_l = texture(color_texture, frag_tex_coord);
-    vec4 color_tex_r = texture(color_texture_r, frag_tex_coord);
+    vec4 color_tex_l, color_tex_r;
+    if (linear_filter != 0) {
+        color_tex_l = GammaCorrectSample(color_texture, frag_tex_coord);
+        color_tex_r = GammaCorrectSample(color_texture_r, frag_tex_coord);
+    } else {
+        color_tex_l = texture(color_texture, frag_tex_coord);
+        color_tex_r = texture(color_texture_r, frag_tex_coord);
+    }
     color = vec4(color_tex_l.rgb*l+color_tex_r.rgb*r, color_tex_l.a);
 }

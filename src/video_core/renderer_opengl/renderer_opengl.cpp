@@ -433,6 +433,7 @@ void RendererOpenGL::ReloadShader(Settings::StereoRenderOption render_3d) {
     uniform_i_resolution = glGetUniformLocation(shader.handle, "i_resolution");
     uniform_o_resolution = glGetUniformLocation(shader.handle, "o_resolution");
     uniform_layer = glGetUniformLocation(shader.handle, "layer");
+    uniform_linear_filter = glGetUniformLocation(shader.handle, "linear_filter");
     attrib_position = glGetAttribLocation(shader.handle, "vert_position");
     attrib_tex_coord = glGetAttribLocation(shader.handle, "vert_tex_coord");
 }
@@ -555,7 +556,9 @@ void RendererOpenGL::DrawSingleScreen(const ScreenInfo& screen_info, float x, fl
     }
 
     const u32 scale_factor = GetResolutionScaleFactor();
-    const GLuint sampler = samplers[Settings::values.filter_mode.GetValue()].handle;
+    const bool use_linear_filter = Settings::values.filter_mode.GetValue();
+    const GLuint sampler = samplers[use_linear_filter].handle;
+    glUniform1i(uniform_linear_filter, use_linear_filter ? 1 : 0);
     glUniform4f(uniform_i_resolution, static_cast<float>(screen_info.texture.width * scale_factor),
                 static_cast<float>(screen_info.texture.height * scale_factor),
                 1.0f / static_cast<float>(screen_info.texture.width * scale_factor),
@@ -625,7 +628,9 @@ void RendererOpenGL::DrawSingleScreenStereo(const ScreenInfo& screen_info_l,
     }
 
     const u32 scale_factor = GetResolutionScaleFactor();
-    const GLuint sampler = samplers[Settings::values.filter_mode.GetValue()].handle;
+    const bool use_linear_filter = Settings::values.filter_mode.GetValue();
+    const GLuint sampler = samplers[use_linear_filter].handle;
+    glUniform1i(uniform_linear_filter, use_linear_filter ? 1 : 0);
     glUniform4f(uniform_i_resolution,
                 static_cast<float>(screen_info_l.texture.width * scale_factor),
                 static_cast<float>(screen_info_l.texture.height * scale_factor),
