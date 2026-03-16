@@ -2,11 +2,9 @@
 #include <QPainter>
 #include <QPixmap>
 #include "core/frontend/framebuffer_layout.h"
-
+#include "common/logging/log.h"
 class Cursor {
 public:
-    Cursor();
-    ~Cursor();
     //Clamp the cursor position within touchscreen boundaries
     void Restrict();
 

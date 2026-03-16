@@ -309,7 +309,7 @@ public:
         QPainter cursorPainter(this);
         cursor->SetPainter(&cursorPainter);
         cursor->SetLayout((Layout::FramebufferLayout*)&curr_window->GetFramebufferLayout());
-        cursor->Update();
+        //cursor->Update();
         if (cursor->GetIsPressed()){
             curr_window->TouchPressed(cursor->GetXTouchPos(), cursor->GetXTouchPos());
         }
