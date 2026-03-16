@@ -260,17 +260,9 @@ void MouseTracker::Update(int bufferWidth, int bufferHeight,
 
     Restrict(0, 0, layout.bottom_screen.GetWidth()-1, layout.bottom_screen.GetHeight()-1);
 
-    // Make the coordinates 0 -> 1
-    projectedX = (float)x / layout.bottom_screen.GetWidth();
-    projectedY = (float)y / layout.bottom_screen.GetHeight();
-
-    // Ensure that the projected position doesn't overlap outside the bottom screen framebuffer.
-    // TODO: Provide config option
-    renderRatio = (float)layout.bottom_screen.GetHeight() / 30;
-
-    // Map the mouse coord to the bottom screen's position
-    projectedX = layout.bottom_screen.left + projectedX * layout.bottom_screen.GetWidth();
-    projectedY = layout.bottom_screen.top + projectedY * layout.bottom_screen.GetHeight();
+    // Store as bottom-screen-local pixel coordinates
+    projectedX = (float)x;
+    projectedY = (float)y;
 
     isPressed = state;
 
@@ -289,7 +281,7 @@ void MouseTracker::Render(int bufferWidth, int bufferHeight, void* framebuffer_d
         const float abs_y = framebuffer_layout.bottom_screen.top + projectedY;
         const float ratio =
             static_cast<float>(framebuffer_layout.bottom_screen.GetHeight()) / 30.0f;
-        cursor_renderer->Render(bufferWidth, bufferHeight, (int) projectedX, (int) projectedY, renderRatio, framebuffer_layout,
+        cursor_renderer->Render(bufferWidth, bufferHeight, abs_x, abs_y, ratio, framebuffer_layout,
                                 framebuffer_data);
     }
 }
