@@ -146,21 +146,21 @@ static void UpdateSettings() {
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, "B"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, "A"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L, "L"},
-        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2, "ZL"},
+        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2, "Speedup Pointer / ZL"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R, "R"},
-        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, "ZR"},
+        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, "Touch Touchscreen / ZR"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select"},
-        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "Home/Swap screens"},
-        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3, "Touch Screen Touch"},
+        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "Toggle Touchscreen and C-Stick Mode"},
+        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3, "Swap Screen"},
         {0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X,
          "Circle Pad X"},
         {0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y,
          "Circle Pad Y"},
         {0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X,
-         "C-Stick / Pointer X"},
+         "Pointer X / C-Stick"},
         {0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y,
-         "C-Stick / Pointer Y"},
+         "Pointer Y / C-Stick"},
         {0, 0},
     };
 
@@ -207,11 +207,21 @@ static void UpdateSettings() {
     Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Select] =
         "button:2,joystick:0,engine:libretro";
     // Citra: ZL = RETRO_DEVICE_ID_JOYPAD_L2 (12)
-    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::ZL] =
-        "button:12,joystick:0,engine:libretro";
+    if (LibRetro::settings.analog_cstick_enabled) {
+        Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::ZL] =
+            "button:12,joystick:0,engine:libretro";
+    } else {
+        Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::ZL] =
+        "";
+    };
     // Citra: ZR = RETRO_DEVICE_ID_JOYPAD_R2 (13)
-    Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::ZR] =
-        "button:13,joystick:0,engine:libretro";
+    if (LibRetro::settings.analog_cstick_enabled) {
+        Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::ZR] =
+            "button:13,joystick:0,engine:libretro";
+    } else {
+        Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::ZR] =
+            "";
+    }
     // Citra: HOME = RETRO_DEVICE_ID_JOYPAD_L3 (as per above bindings) (14)
     Settings::values.current_input_profile.buttons[Settings::NativeButton::Values::Home] =
         "button:14,joystick:0,engine:libretro";
@@ -219,7 +229,7 @@ static void UpdateSettings() {
     // Circle Pad
     Settings::values.current_input_profile.analogs[0] = "axis:0,joystick:0,engine:libretro";
     // C-Stick
-    if (LibRetro::settings.analog_function != LibRetro::CStickFunction::Touchscreen) {
+    if (LibRetro::settings.analog_cstick_enabled) {
         Settings::values.current_input_profile.analogs[1] = "axis:1,joystick:0,engine:libretro";
     } else {
         Settings::values.current_input_profile.analogs[1] = "";
@@ -239,6 +249,12 @@ static void UpdateSettings() {
  * libretro callback; Called every game tick.
  */
 void retro_run() {
+    // Initialize the layout for the first time.
+    if (!LibRetro::settings.initializedLayout) {
+        emu_instance->emu_window->UpdateLayout();
+        LibRetro::settings.initializedLayout = true;
+    }
+
     if (!emu_instance->game_loaded) {
         // Game failed to load (e.g. encrypted ROM, bad path).
         // Present an empty frame so RetroArch doesn't hang.
@@ -260,36 +276,71 @@ void retro_run() {
         mic_input->PollMicrophone();
     }
 
+    bool analog_function_btn =
+        !!LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3);
+    static bool analog_function_btn_state = false;
+    if (LibRetro::settings.analog_function == LibRetro::CStickFunction::Toggle){
+        if (analog_function_btn != analog_function_btn_state) {
+            if (analog_function_btn_state == false){
+                if (LibRetro::settings.analog_toggle == LibRetro::AnalogToggleState::ToggledMain){
+                    LibRetro::settings.analog_toggle = LibRetro::AnalogToggleState::ToggledAlternate;
+                    UpdateSettings();
+                } else if (LibRetro::settings.analog_toggle == LibRetro::AnalogToggleState::ToggledAlternate){
+                    LibRetro::settings.analog_toggle = LibRetro::AnalogToggleState::ToggledMain;
+                    UpdateSettings();
+                }
+            }
+            analog_function_btn_state = analog_function_btn;
+        }
+    }
+
+    if (LibRetro::settings.analog_touch_enabled){
+        bool speedup_btn = !!LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2);
+        if (speedup_btn){
+            if (LibRetro::settings.speedup_enabled != true){
+                LibRetro::settings.speedup_enabled = true;
+            }
+        } else {
+            if (LibRetro::settings.speedup_enabled != false){
+                LibRetro::settings.speedup_enabled = false;
+            }
+        }
+
+    }
     // Check if the screen swap button is pressed
     static bool screen_swap_button_state = false;
     static bool screens_swapped = false;
     bool screen_swap_btn =
-        !!LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3);
+        !!LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3);
     if (screen_swap_btn != screen_swap_button_state) {
-        if (LibRetro::settings.swap_screen_mode == "Toggle") {
+        if (LibRetro::settings.toggle_swap_screen) {
             if (!screen_swap_button_state)
                 screens_swapped = !screens_swapped;
 
-            if (screens_swapped)
-                Settings::values.swap_screen =
-                    LibRetro::FetchVariable("citra_swap_screen", "Top") != "Bottom";
-            else
-                Settings::values.swap_screen =
-                    LibRetro::FetchVariable("citra_swap_screen", "Top") == "Bottom";
+            if (screens_swapped){
+                if (LibRetro::settings.swap_screen_state != true) {
+                    LibRetro::settings.swap_screen_state = true;
+                    UpdateSettings();
+                }
+            } else {
+                if (LibRetro::settings.swap_screen_state != false) {
+                    LibRetro::settings.swap_screen_state = false;
+                    UpdateSettings();
+                }
+            }
         } else {
-            if (screen_swap_btn)
-                Settings::values.swap_screen =
-                    LibRetro::FetchVariable("citra_swap_screen", "Top") != "Bottom";
-            else
-                Settings::values.swap_screen =
-                    LibRetro::FetchVariable("citra_swap_screen", "Top") == "Bottom";
+            if (screen_swap_btn){
+                if (LibRetro::settings.swap_screen_state != true) {
+                    LibRetro::settings.swap_screen_state = true;
+                    UpdateSettings();
+                }
+            } else {
+                if (LibRetro::settings.swap_screen_state != false) {
+                    LibRetro::settings.swap_screen_state = false;
+                    UpdateSettings();
+                }
+            }
         }
-
-        Core::System::GetInstance().ApplySettings();
-
-        // Update the framebuffer sizing.
-        emu_instance->emu_window->UpdateLayout();
-
         screen_swap_button_state = screen_swap_btn;
     }
 

@@ -11,13 +11,36 @@ namespace LibRetro {
 
 enum CStickFunction { Both, CStick, Touchscreen };
 
+enum AnalogToggleState{ ToggledMain, ToggledAlternate};
+
+
 struct CoreSettings {
 
     std::string file_path;
 
     float analog_deadzone = 1.f;
 
+    int maxspeed;
+
+    float responsecurve;
+
+    float speedupratio;
+
+    bool speedup_enabled;
+
     LibRetro::CStickFunction analog_function;
+
+    LibRetro::AnalogToggleState analog_toggle;
+
+    bool swap_screen_state;
+
+    bool inverted_swap_screen_state;
+
+    bool initializedLayout;
+
+    bool analog_cstick_enabled;
+
+    bool analog_touch_enabled;
 
     bool enable_mouse_touchscreen;
 
@@ -28,6 +51,8 @@ struct CoreSettings {
     bool render_touchscreen;
 
     std::string swap_screen_mode;
+
+    bool toggle_swap_screen;
 
     bool enable_motion;
 

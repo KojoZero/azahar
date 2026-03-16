@@ -184,44 +184,93 @@ void MouseTracker::Update(int bufferWidth, int bufferHeight,
         }
     }
 
-    if (LibRetro::settings.analog_function != LibRetro::CStickFunction::CStick) {
+    if (LibRetro::settings.analog_touch_enabled) {
         // Check right analog input
-        state |= LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3);
+        state |= LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2); //Orinally R3
 
         // TODO: Provide config option for ratios here
-        auto widthSpeed = (layout.bottom_screen.GetWidth() / 20.0);
-        auto heightSpeed = (layout.bottom_screen.GetHeight() / 20.0);
-
+        int maxSpeed = LibRetro::settings.maxspeed;
+        float realSpeed;
+        switch (maxSpeed) {
+            case 1:
+                realSpeed = 0.4f;
+                break;
+            case 2:
+                realSpeed = 0.6f;
+                break;
+            case 3:
+                realSpeed = 0.8f;
+                break;
+            case 4:
+                realSpeed = 1.0f;
+                break;
+            case 5:
+                realSpeed = 1.2f;
+                break;
+            case 6:
+                realSpeed = 1.4f;
+                break;
+            case 7:
+                realSpeed = 1.6f;
+                break;
+            case 8:
+                realSpeed = 1.8f;
+                break;
+            case 9:
+                realSpeed = 2.0f;
+                break;
+            default:
+                realSpeed = 0.8f; // Default to max speed
+        }
+        float heightSpeed = (layout.bottom_screen.GetHeight() / 20.0) * 0.75 * realSpeed; //Matches MelonDS when accounting for screen size
         // Use controller movement
-        float controllerX =
+        float joystickNormX =
             ((float)LibRetro::CheckInput(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT,
                                          RETRO_DEVICE_ID_ANALOG_X) /
              INT16_MAX);
-        float controllerY =
+        float joystickNormY =
             ((float)LibRetro::CheckInput(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT,
                                          RETRO_DEVICE_ID_ANALOG_Y) /
              INT16_MAX);
-
-        // Deadzone the controller inputs
-        float smoothedX = std::abs(controllerX);
-        float smoothedY = std::abs(controllerY);
-
-        if (smoothedX < LibRetro::settings.analog_deadzone) {
-            controllerX = 0;
+        float deadzone = LibRetro::settings.deadzone;
+        bool speedup_enabled = LibRetro::settings.speedup_enabled;
+        float responsecurve = LibRetro::settings.responsecurve;
+        float speedupratio = LibRetro::settings.speedupratio;
+        float radialLength = std::sqrt((joystickNormX * joystickNormX) + (joystickNormY * joystickNormY));
+        float joystickScaledX = 0.0f;
+        float joystickScaledY = 0.0f;
+        if (radialLength > deadzone) {
+            // Get X and Y as a relation to the radial length
+            float dirX = joystickNormX / radialLength;
+            float dirY = joystickNormY / radialLength;
+            // Apply deadzone and response curve
+            float scaledLength = (radialLength - deadzone) / (1.0f - deadzone);
+            float curvedLength = std::pow(std::min<float>(1.0f, scaledLength), responsecurve);
+            // Final output
+            float finalLength = speedup_enabled ? curvedLength * speedupratio : curvedLength;
+            joystickScaledX = dirX * finalLength;
+            joystickScaledY = dirY * finalLength;
+        } else {
+            joystickScaledX = 0.0f;
+            joystickScaledY = 0.0f;
         }
-        if (smoothedY < LibRetro::settings.analog_deadzone) {
-            controllerY = 0;
-        }
-
-        OnMouseMove(static_cast<int>(controllerX * widthSpeed),
-                    static_cast<int>(controllerY * heightSpeed));
+        OnMouseMove(static_cast<float>(joystickScaledX * heightSpeed),
+                    static_cast<float>(joystickScaledY * heightSpeed));
     }
 
-    Restrict(0, 0, layout.bottom_screen.GetWidth(), layout.bottom_screen.GetHeight());
+    Restrict(0, 0, layout.bottom_screen.GetWidth()-1, layout.bottom_screen.GetHeight()-1);
 
-    // Store as bottom-screen-local pixel coordinates
-    projectedX = static_cast<float>(x);
-    projectedY = static_cast<float>(y);
+    // Make the coordinates 0 -> 1
+    projectedX = (float)x / layout.bottom_screen.GetWidth();
+    projectedY = (float)y / layout.bottom_screen.GetHeight();
+
+    // Ensure that the projected position doesn't overlap outside the bottom screen framebuffer.
+    // TODO: Provide config option
+    renderRatio = (float)layout.bottom_screen.GetHeight() / 30;
+
+    // Map the mouse coord to the bottom screen's position
+    projectedX = layout.bottom_screen.left + projectedX * layout.bottom_screen.GetWidth();
+    projectedY = layout.bottom_screen.top + projectedY * layout.bottom_screen.GetHeight();
 
     isPressed = state;
 

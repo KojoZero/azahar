@@ -73,6 +73,8 @@ static constexpr const char* swap_screen_mode = citra_setting(BaseKeys::swap_scr
 static constexpr const char* large_screen_proportion =
     citra_setting(BaseKeys::large_screen_proportion);
 } // namespace layout
+static constexpr const char* small_screen_position = citra_setting(BaseKeys::small_screen_position);
+
 
 namespace storage {
 static constexpr const char* use_virtual_sd = citra_setting(BaseKeys::use_virtual_sd);
@@ -519,7 +521,26 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
         },
         "4.00"
     },
-
+    {
+        config::layout::small_screen_position,
+        "Small Screen Position",
+        "Small Screen Position",
+        "Set the position of the smaller screen in large screen layout.",
+        nullptr,
+        config::category::layout,
+        {
+            { "TopRight", "Top Right" },
+            { "MiddleRight", "Middle Right" },
+            { "BottomRight", "Bottom Right" },
+            { "TopLeft", "Top Left" },
+            { "MiddleLeft", "Middle Left" },
+            { "BottomLeft", "Bottom Left" },
+            { "AboveLarge", "Above Large" },
+            { "BelowLarge", "Below Large" },
+            { nullptr, nullptr }
+        },
+        "MiddleRight"
+    },
     // Storage Category
     {
         config::storage::use_virtual_sd,
@@ -555,16 +576,20 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
         config::input::analog_function,
         "Right Analog Function",
         "Right Analog Function",
-        "Configure what the right analog stick controls.",
+        "Configure what the right analog stick controls.\n"
+        "In C-Stick Mode, the right analog stick gets set to the C-Stick, and L2/R2 get set to ZL/ZR.\n"
+        "In Touchscreen Mode, the right analog stick gets set to the touchscreen, and L2/R2 get set to Speedup Pointer/Touch Touchscreen.\n"
+        "If set to Toggle, pressing the toggle button (L3 by default) will alternate between Touchscreen and C-Stick modes.",
         nullptr,
         config::category::input,
         {
+            { "toggle", "C-Stick and Touchscreen Pointer (Toggle)"},
             { "c_stick_and_touchscreen", "C-Stick and Touchscreen Pointer" },
             { "touchscreen_pointer", "Touchscreen Pointer" },
             { "c_stick", "C-Stick" },
             { nullptr, nullptr }
         },
-        "c_stick_and_touchscreen"
+        "toggle"
     },
     {
         config::input::analog_deadzone,
@@ -579,6 +604,59 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
             { nullptr, nullptr }
         },
         "15"
+    },
+    {
+        config::input::maxspeed,
+        "Analog Pointer Max Speed",
+        "Analog Pointer Max Speed",
+        "Set the max speed for the analog pointer.",
+        nullptr,
+        config::category::input,
+        {
+            {"1", "1"},
+            {"2", "2"},
+            {"3", "3"},
+            {"4", "4"},
+            {"5", "5"},
+            {"6", "6"},
+            {"7", "7"},
+            {"8", "8"},
+            {"9", "9"},
+            {nullptr, nullptr},
+        },
+        "3"
+    },
+    {
+        config::input::responsecurve,
+        "Analog Pointer Response Curve",
+        "Analog Pointer Response Curve",
+        "Set the response curve for the analog pointer.\n"
+        "1 is a linear response curve where the cursor speed is 1:1 with the joystick input.\n"
+        "2 is an exponential curve that reduces the sensitivity near the joystick center for finer control, but increases the sensitivity near the edges",
+        nullptr,
+        config::category::input,
+        {
+            {"1", "1"},
+            {"2", "2"},
+            {nullptr, nullptr},
+        },
+        "2"
+    },
+    {
+        config::input::speedupratio,
+        "Analog Pointer Speedup Multiplier",
+        "Analog Pointer Speedup Multiplier",
+        "Set the speedup multiplier for the analog pointer when the speedup pointer button (L2 by default) is held",
+        nullptr,
+        config::category::input,
+        {
+            {"1.5", "150%"},
+            {"2.0", "200%"},
+            {"2.5", "250%"},
+            {"3.0", "300%"},
+            {nullptr, nullptr},
+        },
+        "2.0"
     },
     {
         config::input::enable_mouse_touchscreen,
@@ -946,20 +1024,44 @@ static Settings::LayoutOption GetLayoutOption(const std::string& name) {
         return Settings::LayoutOption::SideScreen;
     return Settings::LayoutOption::Default;
 }
-
+static Settings::SmallScreenPosition GetSmallScreenPosition(const std::string& name) {
+    if (name == "TopRight" || name == "Top Right")
+        return Settings::SmallScreenPosition::TopRight;
+    if (name == "MiddleRight" || name == "Middle Right")
+        return Settings::SmallScreenPosition::MiddleRight;
+    if (name == "BottomRight" || name == "Bottom Right")
+        return Settings::SmallScreenPosition::BottomRight;
+    if (name == "TopLeft" || name == "Top Left")
+        return Settings::SmallScreenPosition::TopLeft;
+    if (name == "MiddleLeft" || name == "Middle Left")
+        return Settings::SmallScreenPosition::MiddleLeft;
+    if (name == "BottomLeft" || name == "Bottom Left")
+        return Settings::SmallScreenPosition::BottomLeft;
+    if (name == "AboveLarge" || name == "Above Large")
+        return Settings::SmallScreenPosition::AboveLarge;
+    if (name == "BelowLarge" || name == "Below Large")
+        return Settings::SmallScreenPosition::BelowLarge;
+    return Settings::SmallScreenPosition::MiddleRight; // Default
+}
 static void ParseLayoutOptions(void) {
     Settings::values.layout_option =
         GetLayoutOption(LibRetro::FetchVariable(config::layout::layout_option, "default"));
-
-    Settings::values.swap_screen =
-        LibRetro::FetchVariable(config::layout::swap_screen, "Top") == "Bottom";
+    auto large_screen_proportion =
+        LibRetro::FetchVariable(config::layout::large_screen_proportion, "2.00");
+    Settings::values.large_screen_proportion = std::stof(large_screen_proportion);
+    Settings::values.small_screen_position =
+        GetSmallScreenPosition(LibRetro::FetchVariable(config::layout::small_screen_position, "MiddleRight"));
+    auto prominentScreen = LibRetro::FetchVariable(config::layout::swap_screen, "Top");
+    LibRetro::settings.inverted_swap_screen_state = !LibRetro::settings.swap_screen_state;
+    if (prominentScreen == "Bottom") {
+        Settings::values.swap_screen = LibRetro::settings.inverted_swap_screen_state;
+    } else {
+        Settings::values.swap_screen = LibRetro::settings.swap_screen_state;
+    }
 
     LibRetro::settings.swap_screen_mode =
         LibRetro::FetchVariable(config::layout::swap_screen_mode, "Toggle");
 
-    auto large_screen_proportion =
-        LibRetro::FetchVariable(config::layout::large_screen_proportion, "4.00");
-    Settings::values.large_screen_proportion = std::stof(large_screen_proportion);
 }
 
 static void ParseStorageOptions(void) {
@@ -997,16 +1099,20 @@ static void ParseStorageOptions(void) {
 }
 
 static LibRetro::CStickFunction GetAnalogFunction(const std::string& name) {
+    if (name == "toggle" || name == "C-Stick and Touchscreen Pointer (Toggle)")
+        return LibRetro::CStickFunction::Toggle;
+    if (name == "c_stick_and_touchscreen" || name == "C-Stick and Touchscreen Pointer")
+        return LibRetro::CStickFunction::Both;
     if (name == "c_stick" || name == "C-Stick")
         return LibRetro::CStickFunction::CStick;
     if (name == "touchscreen_pointer" || name == "Touchscreen Pointer")
         return LibRetro::CStickFunction::Touchscreen;
-    return LibRetro::CStickFunction::Both; // Default
+    return LibRetro::CStickFunction::Toggle; // Default
 }
 
 static void ParseInputOptions(void) {
     LibRetro::settings.analog_function = GetAnalogFunction(
-        LibRetro::FetchVariable(config::input::analog_function, "c_stick_and_touchscreen"));
+        LibRetro::FetchVariable(config::input::analog_function, "toggle"));
 
     if (LibRetro::settings.analog_function != LibRetro::CStickFunction::Touchscreen) {
         Settings::values.current_input_profile.analogs[1] = "axis:1,joystick:0,engine:libretro";
@@ -1014,8 +1120,21 @@ static void ParseInputOptions(void) {
         Settings::values.current_input_profile.analogs[1] = "";
     }
 
+
+    LibRetro::settings.analog_cstick_enabled = LibRetro::settings.analog_function == LibRetro::CStickFunction::Both || LibRetro::settings.analog_function == LibRetro::CStickFunction::CStick || (LibRetro::settings.analog_function == LibRetro::CStickFunction::Toggle && LibRetro::settings.analog_toggle == LibRetro::AnalogToggleState::ToggledAlternate);
+    LibRetro::settings.analog_touch_enabled = LibRetro::settings.analog_function == LibRetro::CStickFunction::Both || LibRetro::settings.analog_function == LibRetro::CStickFunction::Touchscreen || (LibRetro::settings.analog_function == LibRetro::CStickFunction::Toggle && LibRetro::settings.analog_toggle == LibRetro::AnalogToggleState::ToggledMain);
+
     auto analog_deadzone = LibRetro::FetchVariable(config::input::analog_deadzone, "15");
     LibRetro::settings.analog_deadzone = static_cast<float>(std::stoi(analog_deadzone)) / 100.0f;
+
+    auto maxspeed = LibRetro::FetchVariable(config::input::maxspeed, "3");
+    LibRetro::settings.maxspeed = std::stoi(maxspeed);
+
+    auto responsecurve = LibRetro::FetchVariable(config::input::responsecurve, "2");
+    LibRetro::settings.responsecurve = std::stod(responsecurve);
+
+    auto speedupratio = LibRetro::FetchVariable(config::input::speedupratio, "2.0");
+    LibRetro::settings.speedupratio = std::stod(speedupratio);
 
     LibRetro::settings.enable_mouse_touchscreen =
         LibRetro::FetchVariable(config::input::enable_mouse_touchscreen, config::enabled) ==

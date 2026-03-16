@@ -238,7 +238,8 @@ LayoutGeometry ComputeLayoutGeometry() {
     unsigned baseX;
     unsigned baseY;
     bool emulated_pointer = true;
-
+    float large_screen_proportion =
+        Settings::values.large_screen_proportion.GetValue();
     float scaling = Settings::values.resolution_factor.GetValue();
     bool swapped = Settings::values.swap_screen.GetValue();
 
@@ -257,22 +258,14 @@ LayoutGeometry ComputeLayoutGeometry() {
         break;
     case Settings::LayoutOption::LargeScreen:
         if (swapped) { // Bottom screen biggest
-            baseX = Core::kScreenBottomWidth + Core::kScreenTopWidth / 4;
-            baseY = Core::kScreenBottomHeight;
+            baseX = (Core::kScreenBottomWidth * large_screen_proportion) + Core::kScreenTopWidth;
+            baseY = (Core::kScreenBottomHeight * large_screen_proportion);
         } else { // Top screen biggest
-            baseX = Core::kScreenTopWidth + Core::kScreenBottomWidth / 4;
-            baseY = Core::kScreenTopHeight;
+            baseX = (Core::kScreenTopWidth * large_screen_proportion) + Core::kScreenBottomWidth;
+            baseY = (Core::kScreenTopHeight * large_screen_proportion);
         }
-
-        if (scaling < 4) {
-            // Unfortunately, to get this aspect ratio correct (and have non-blurry 1x scaling),
-            //  we have to have a pretty large buffer for the minimum ratio.
-            baseX *= 4;
-            baseY *= 4;
-        } else {
-            baseX *= scaling;
-            baseY *= scaling;
-        }
+        baseX *= scaling;
+        baseY *= scaling;
         break;
     case Settings::LayoutOption::SideScreen:
         baseX = Core::kScreenBottomWidth + Core::kScreenTopWidth;
