@@ -12,6 +12,7 @@
 #include <QWidget>
 #include "core/core.h"
 #include "core/frontend/emu_window.h"
+#include "citra_qt/input/cursor.h"
 
 class QKeyEvent;
 class QTouchEvent;

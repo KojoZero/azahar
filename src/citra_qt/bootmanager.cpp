@@ -285,7 +285,6 @@ public:
             setAttribute(Qt::WA_DontCreateNativeAncestors);
         }
         windowHandle()->setSurfaceType(QWindow::OpenGLSurface);
-        OpenGLCursorRenderer();
     }
 
     void SetContext(std::unique_ptr<Frontend::GraphicsContext>&& context_) {
@@ -443,6 +442,10 @@ public:
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         system.GPU().Renderer().TryPresent(100, is_secondary);
         context->SwapBuffers();
+        if (first_present){
+            OpenGLCursorRenderer();
+            first_present = !first_present;
+        }
         currCursor->Update();
         Layout::FramebufferLayout* currlayout =(Layout::FramebufferLayout*)&curr_window->GetFramebufferLayout();
         float currBufferWidth = currlayout->bottom_screen.GetWidth();
@@ -471,6 +474,7 @@ private:
     OpenGL::OGLProgram shader;
     OpenGL::OGLVertexArray vao;
     OpenGL::OGLBuffer vbo;
+    bool first_present = true;
     bool cursor_gl_initialized = false;
 };
 #endif
