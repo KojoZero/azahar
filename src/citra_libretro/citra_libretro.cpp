@@ -151,7 +151,7 @@ static void UpdateSettings() {
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, "Touch Touchscreen / ZR"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select"},
-        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "Toggle Touchscreen and C-Stick Mode"},
+        {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "Toggle between Touchscreen and C-Stick Mode"},
         {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3, "Swap Screen"},
         {0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X,
          "Circle Pad X"},
@@ -313,7 +313,7 @@ void retro_run() {
     bool screen_swap_btn =
         !!LibRetro::CheckInput(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3);
     if (screen_swap_btn != screen_swap_button_state) {
-        if (LibRetro::settings.toggle_swap_screen) {
+        if (LibRetro::settings.swap_screen_mode == "Toggle") {
             if (!screen_swap_button_state)
                 screens_swapped = !screens_swapped;
 

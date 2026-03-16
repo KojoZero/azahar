@@ -289,7 +289,7 @@ void MouseTracker::Render(int bufferWidth, int bufferHeight, void* framebuffer_d
         const float abs_y = framebuffer_layout.bottom_screen.top + projectedY;
         const float ratio =
             static_cast<float>(framebuffer_layout.bottom_screen.GetHeight()) / 30.0f;
-        cursor_renderer->Render(bufferWidth, bufferHeight, abs_x, abs_y, ratio, framebuffer_layout,
+        cursor_renderer->Render(bufferWidth, bufferHeight, (int) projectedX, (int) projectedY, renderRatio, framebuffer_layout,
                                 framebuffer_data);
     }
 }

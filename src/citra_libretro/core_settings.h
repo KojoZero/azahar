@@ -52,8 +52,6 @@ struct CoreSettings {
 
     std::string swap_screen_mode;
 
-    bool toggle_swap_screen;
-
     bool enable_motion;
 
     float motion_sensitivity;
