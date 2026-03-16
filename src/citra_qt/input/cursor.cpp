@@ -72,13 +72,13 @@ void Cursor::Render(){
 
 void Cursor::DrawBlackPixel(int offsetX, int offsetY){
     int x = xRenderPos+(offsetX*pixelWidth);
-    int y = yRenderPos+(offsetY*pixelWidth);
+    int y = yRenderPos+(offsetY*pixelHeight);
     painter->fillRect(x, y, pixelWidth, pixelHeight, Qt::black);
 }
 
 void Cursor::DrawWhitePixel(int offsetX, int offsetY){
     int x = xRenderPos+(offsetX*pixelWidth);
-    int y = yRenderPos+(offsetY*pixelWidth);
+    int y = yRenderPos+(offsetY*pixelHeight);
     painter->fillRect(x, y, pixelWidth, pixelHeight, Qt::white);
 }
 
