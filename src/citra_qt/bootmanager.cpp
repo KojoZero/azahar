@@ -276,6 +276,7 @@ public:
 #ifdef ENABLE_OPENGL
 class OpenGLRenderWidget : public RenderWidget {
 public:
+    Cursor* currCursor = new Cursor();
     explicit OpenGLRenderWidget(GRenderWindow* parent, Core::System& system_, bool is_secondary)
         : RenderWidget(parent), system(system_), is_secondary(is_secondary) {
         setAttribute(Qt::WA_NativeWindow);
@@ -284,90 +285,146 @@ public:
             setAttribute(Qt::WA_DontCreateNativeAncestors);
         }
         windowHandle()->setSurfaceType(QWindow::OpenGLSurface);
+        OpenGLCursorRenderer();
     }
 
     void SetContext(std::unique_ptr<Frontend::GraphicsContext>&& context_) {
         context = std::move(context_);
     }
 
-    void InitCursorGL() {
-        const bool use_gles = Settings::values.use_gles.GetValue();
-        const std::string precision = use_gles ? "precision mediump float;\n" : "";
+    struct CursorCoordinates {
+        float centerX, centerY;
+        float renderWidth, renderHeight;
+        float boundingLeft, boundingTop, boundingRight, boundingBottom;
+        float verticalLeft, verticalRight, verticalTop, verticalBottom;
+        float horizontalLeft, horizontalRight, horizontalTop, horizontalBottom;
 
-        const std::string vert = precision + R"(
-            in vec2 position;
-            void main() { gl_Position = vec4(position, 0.0, 1.0); }
+        CursorCoordinates(int bufferWidth, int bufferHeight, float projectedX, float projectedY,
+                          float renderRatio, Layout::FramebufferLayout* layout) {
+            // Convert to normalized device coordinates
+            centerX = (projectedX / bufferWidth) * 2 - 1;
+            centerY = (projectedY / bufferHeight) * 2 - 1;
+
+            renderWidth = renderRatio / bufferWidth;
+            renderHeight = renderRatio / bufferHeight;
+
+            boundingLeft = (layout->bottom_screen.left / (float)bufferWidth) * 2 - 1;
+            boundingTop = (layout->bottom_screen.top / (float)bufferHeight) * 2 - 1;
+            boundingRight = (layout->bottom_screen.right / (float)bufferWidth) * 2 - 1;
+            boundingBottom = (layout->bottom_screen.bottom / (float)bufferHeight) * 2 - 1;
+
+                   // Calculate cursor dimensions
+            verticalLeft = std::fmax(centerX - renderWidth / 5, boundingLeft);
+            verticalRight = std::fmin(centerX + renderWidth / 5, boundingRight);
+            verticalTop = -std::fmax(centerY - renderHeight, boundingTop);
+            verticalBottom = -std::fmin(centerY + renderHeight, boundingBottom);
+
+            horizontalLeft = std::fmax(centerX - renderWidth, boundingLeft);
+            horizontalRight = std::fmin(centerX + renderWidth, boundingRight);
+            horizontalTop = -std::fmax(centerY - renderHeight / 5, boundingTop);
+            horizontalBottom = -std::fmin(centerY + renderHeight / 5, boundingBottom);
+        }
+    };
+
+    void OpenGLCursorRenderer() {
+        // Could potentially also use Citra's built-in shaders, if they can be
+        //  wrangled to cooperate.
+        static constexpr char fragment_shader_precision_OES[] = R"(
+        #if GL_ES
+        #ifdef GL_FRAGMENT_PRECISION_HIGH
+        precision highp int;
+        precision highp float;
+        precision highp samplerBuffer;
+        precision highp uimage2D;
+        #else
+        precision mediump int;
+        precision mediump float;
+        precision mediump samplerBuffer;
+        precision mediump uimage2D;
+        #endif // GL_FRAGMENT_PRECISION_HIGH
+        #endif
         )";
-        const std::string frag = precision + R"(
-            out vec4 color;
-            void main() { color = vec4(1.0, 1.0, 1.0, 1.0); }
-        )";
-
-        cursor_vao.Create();
-        cursor_vbo.Create();
-        cursor_shader.Create(vert.c_str(), frag.c_str());
-
-        glBindVertexArray(cursor_vao.handle);
-        glBindBuffer(GL_ARRAY_BUFFER, cursor_vbo.handle);
-        const auto pos_loc =
-            static_cast<GLuint>(glGetAttribLocation(cursor_shader.handle, "position"));
-        glEnableVertexAttribArray(pos_loc);
-        glVertexAttribPointer(pos_loc, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-        glBindVertexArray(0);
-
-        cursor_gl_initialized = true;
-    }
-
-    void RenderCursorGL() {
-        if (!cursor_gl_initialized) {
-            InitCursorGL();
+        std::string vertex;
+        if (Settings::values.use_gles) {
+            vertex += fragment_shader_precision_OES;
         }
 
-        const auto info = curr_window->GetCursorInfo();
-        if (!info.visible) return;
+        vertex += R"(
+            in vec2 position;
 
-        const auto& layout = curr_window->GetFramebufferLayout();
-        const float buf_w = static_cast<float>(layout.width);
-        const float buf_h = static_cast<float>(layout.height);
-        const float abs_x = layout.bottom_screen.left + info.projected_x;
-        const float abs_y = layout.bottom_screen.top + info.projected_y;
-        const float ratio = static_cast<float>(layout.bottom_screen.GetHeight()) / 30.0f;
+            void main()
+            {
+                gl_Position = vec4(position, 0.0, 1.0);
+            }
+        )";
 
-        // Convert to screen-NDC (x: -1 to 1, y: -1 at top to 1 at bottom)
-        const float cx = (abs_x / buf_w) * 2.0f - 1.0f;
-        const float cy = (abs_y / buf_h) * 2.0f - 1.0f;
-        const float rw = ratio / buf_w;
-        const float rh = ratio / buf_h;
+        std::string fragment;
+        if (Settings::values.use_gles) {
+            fragment += fragment_shader_precision_OES;
+        }
+        fragment += R"(
+            out vec4 color;
 
-        const float bl = (layout.bottom_screen.left / buf_w) * 2.0f - 1.0f;
-        const float bt = (layout.bottom_screen.top / buf_h) * 2.0f - 1.0f;
-        const float br = (layout.bottom_screen.right / buf_w) * 2.0f - 1.0f;
-        const float bb = (layout.bottom_screen.bottom / buf_h) * 2.0f - 1.0f;
+            void main()
+            {
+                color = vec4(1.0, 1.0, 1.0, 1.0);
+            }
+        )";
 
-        // Vertical bar — negate Y to flip from screen-NDC to true OpenGL NDC
-        const float vl = std::fmax(cx - rw / 5.0f, bl);
-        const float vr = std::fmin(cx + rw / 5.0f, br);
-        const float vt = -std::fmax(cy - rh, bt);
-        const float vb = -std::fmin(cy + rh, bb);
+        vao.Create();
+        vbo.Create();
 
-        // Horizontal bar
-        const float hl = std::fmax(cx - rw, bl);
-        const float hr = std::fmin(cx + rw, br);
-        const float ht = -std::fmax(cy - rh / 5.0f, bt);
-        const float hb = -std::fmin(cy + rh / 5.0f, bb);
+        glBindVertexArray(vao.handle);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo.handle);
 
-        const GLfloat vertices[] = {
-            vl, vt, vr, vt, vr, vb, vl, vt, vr, vb, vl, vb,
-            hl, ht, hr, ht, hr, hb, hl, ht, hr, hb, hl, hb,
+        shader.Create(vertex.c_str(), fragment.c_str());
+
+        auto positionVariable = (GLuint)glGetAttribLocation(shader.handle, "position");
+        glEnableVertexAttribArray(positionVariable);
+
+        glVertexAttribPointer(positionVariable, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    }
+
+    //Inputs are, bufferWidth, bufferHeight, framebuffer_layout.bottom_screen.left + projectedX,framebuffer_layout.bottom_screen.top + projectedY, framebuffer_layout, framebuffer_data)
+    void OpenGLCursorRendererRender (int bufferWidth, int bufferHeight, float projectedX,
+                                      float projectedY, float renderRatio,
+                                      Layout::FramebufferLayout* layout) {
+        // Use shared coordinate calculation
+        CursorCoordinates coords(bufferWidth, bufferHeight, projectedX, projectedY, renderRatio,
+                                 layout);
+
+        glUseProgram(shader.handle);
+
+        glBindVertexArray(vao.handle);
+
+               // clang-format off
+        GLfloat cursor[] = {
+            // | in the cursor
+            coords.verticalLeft,  coords.verticalTop,
+            coords.verticalRight, coords.verticalTop,
+            coords.verticalRight, coords.verticalBottom,
+
+            coords.verticalLeft,  coords.verticalTop,
+            coords.verticalRight, coords.verticalBottom,
+            coords.verticalLeft,  coords.verticalBottom,
+
+            // - in the cursor
+            coords.horizontalLeft,  coords.horizontalTop,
+            coords.horizontalRight, coords.horizontalTop,
+            coords.horizontalRight, coords.horizontalBottom,
+
+            coords.horizontalLeft,  coords.horizontalTop,
+            coords.horizontalRight, coords.horizontalBottom,
+            coords.horizontalLeft,  coords.horizontalBottom
         };
-
-        glUseProgram(cursor_shader.handle);
-        glBindVertexArray(cursor_vao.handle);
-        glBindBuffer(GL_ARRAY_BUFFER, cursor_vbo.handle);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+        // clang-format on
 
         glEnable(GL_BLEND);
         glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ONE_MINUS_SRC_COLOR);
+
+        glBindBuffer(GL_ARRAY_BUFFER, vbo.handle);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(cursor), cursor, GL_STATIC_DRAW);
+
         glDrawArrays(GL_TRIANGLES, 0, 12);
 
         glBindVertexArray(0);
@@ -385,9 +442,15 @@ public:
         context->MakeCurrent();
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         system.GPU().Renderer().TryPresent(100, is_secondary);
-        glViewport(0, 0, width(), height());
-        RenderCursorGL();
         context->SwapBuffers();
+        currCursor->Update();
+        Layout::FramebufferLayout* currlayout =(Layout::FramebufferLayout*)&curr_window->GetFramebufferLayout();
+        float currBufferWidth = currlayout->bottom_screen.GetWidth();
+        float currBufferHeight = currlayout->bottom_screen.GetHeight();
+        float currProjectedX = currCursor->GetXPos() * (currBufferWidth / 320.0f);
+        float currProjectedY = currCursor->GetYPos() * (currBufferHeight / 240.0f);
+        float currRenderRatio = currlayout->bottom_screen.GetHeight()/30.0f;
+        OpenGLCursorRendererRender(currBufferWidth, currBufferHeight, currProjectedX, currProjectedY, currRenderRatio, currlayout);
         glFinish();
     }
 
@@ -405,9 +468,9 @@ private:
     Core::System& system;
     bool is_secondary;
 
-    OpenGL::OGLProgram cursor_shader;
-    OpenGL::OGLVertexArray cursor_vao;
-    OpenGL::OGLBuffer cursor_vbo;
+    OpenGL::OGLProgram shader;
+    OpenGL::OGLVertexArray vao;
+    OpenGL::OGLBuffer vbo;
     bool cursor_gl_initialized = false;
 };
 #endif
@@ -540,7 +603,6 @@ GRenderWindow::GRenderWindow(QWidget* parent_, EmuThread* emu_thread_, Core::Sys
                              bool is_secondary_)
     : QWidget(parent_), EmuWindow(is_secondary_), emu_thread(emu_thread_), system{system_} {
 
-    cursor = new Cursor();
     setAttribute(Qt::WA_AcceptTouchEvents);
     auto layout = new QHBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -569,16 +631,6 @@ void GRenderWindow::PollEvents() {
         first_frame = true;
         emit FirstFrameDisplayed();
     }
-    cursor->Update();
-}
-
-Frontend::EmuWindow::CursorInfo GRenderWindow::GetCursorInfo() const {
-    const auto& layout = GetFramebufferLayout();
-    const float w = static_cast<float>(layout.bottom_screen.GetWidth());
-    const float h = static_cast<float>(layout.bottom_screen.GetHeight());
-    const float projected_x = cursor->GetXPos() * (w / 320.0f);
-    const float projected_y = cursor->GetYPos() * (h / 240.0f);
-    return {true, projected_x, projected_y};
 }
 
 // On Qt 5.0+, this correctly gets the size of the framebuffer (pixels).
@@ -593,7 +645,6 @@ void GRenderWindow::OnFramebufferSizeChanged() {
     const u32 width = static_cast<u32>(this->width() * pixel_ratio);
     const u32 height = static_cast<u32>(this->height() * pixel_ratio);
     UpdateCurrentFramebufferLayout(width, height);
-    cursor->SetLayout(&GetFramebufferLayout());
 }
 
 void GRenderWindow::BackupGeometry() {

@@ -16,7 +16,6 @@
 class QKeyEvent;
 class QTouchEvent;
 
-class Cursor;
 class GRenderWindow;
 
 namespace Core {
@@ -130,7 +129,6 @@ public:
     void DoneCurrent() override;
     void PollEvents() override;
     std::unique_ptr<Frontend::GraphicsContext> CreateSharedContext() const override;
-    Frontend::EmuWindow::CursorInfo GetCursorInfo() const override;
 
     void BackupGeometry();
     void RestoreGeometry();
@@ -204,7 +202,7 @@ private:
 #endif
 
     QWidget* child_widget = nullptr;
-    Cursor* cursor = nullptr;
+    Cursor* currCursor = nullptr;
 
     EmuThread* emu_thread;
     Core::System& system;
