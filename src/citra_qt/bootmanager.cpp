@@ -11,6 +11,7 @@
 #include "citra_qt/bootmanager.h"
 #include "citra_qt/citra_qt.h"
 #include "citra_qt/util/util.h"
+#include "citra_qt/input/cursor.h"
 #include "common/color.h"
 #include "common/microprofile.h"
 #include "common/scm_rev.h"
@@ -64,7 +65,6 @@ static GMainWindow* GetMainWindow() {
 void EmuThread::run() {
     MicroProfileOnThreadCreate("EmuThread");
     const auto scope = core_context.Acquire();
-
     if (Settings::values.custom_textures && Settings::values.preload_textures) {
         emit LoadProgress(VideoCore::LoadCallbackStage::Preload, 0, 0, "");
         system.CustomTexManager().PreloadTextures(
@@ -262,8 +262,10 @@ class DummyContext : public Frontend::GraphicsContext {};
 
 class RenderWidget : public QWidget {
 public:
+    GRenderWindow* curr_window;
     RenderWidget(GRenderWindow* parent) : QWidget(parent) {
         setMouseTracking(true);
+        curr_window = parent;
         update();
     }
 
@@ -273,6 +275,8 @@ public:
 #ifdef ENABLE_OPENGL
 class OpenGLRenderWidget : public RenderWidget {
 public:
+    Cursor* cursor = new Cursor();
+
     explicit OpenGLRenderWidget(GRenderWindow* parent, Core::System& system_, bool is_secondary)
         : RenderWidget(parent), system(system_), is_secondary(is_secondary) {
         setAttribute(Qt::WA_NativeWindow);
@@ -302,6 +306,13 @@ public:
     }
 
     void paintEvent(QPaintEvent* event) override {
+        QPainter cursorPainter(this);
+        cursor->SetPainter(&cursorPainter);
+        cursor->SetLayout((Layout::FramebufferLayout*)&curr_window->GetFramebufferLayout());
+        cursor->Update();
+        if (cursor->GetIsPressed()){
+            curr_window->TouchPressed(cursor->GetXTouchPos(), cursor->GetXTouchPos());
+        }
         Present();
         update();
     }
