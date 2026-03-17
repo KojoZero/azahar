@@ -60,6 +60,7 @@ static constexpr const char* use_shader_jit = citra_setting(BaseKeys::use_shader
 static constexpr const char* shaders_accurate_mul = citra_setting(BaseKeys::shaders_accurate_mul);
 static constexpr const char* use_disk_shader_cache = citra_setting(BaseKeys::use_disk_shader_cache);
 static constexpr const char* resolution_factor = citra_setting(BaseKeys::resolution_factor);
+static constexpr const char* filter_mode = citra_setting(BaseKeys::filter_mode);
 static constexpr const char* texture_filter = citra_setting(BaseKeys::texture_filter);
 static constexpr const char* texture_sampling = citra_setting(BaseKeys::texture_sampling);
 static constexpr const char* custom_textures = citra_setting(BaseKeys::custom_textures);
@@ -380,6 +381,20 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
             { nullptr, nullptr }
         },
         "1"
+    },
+    {
+        config::graphics::filter_mode,
+        "Enable Linear Filtering",
+        "Enable Linear Filtering",
+        "Enables Linear Filtering",
+        nullptr,
+        config::category::graphics,
+        {
+            { config::enabled, "Enabled" },
+            { config::disabled, "Disabled" },
+            { nullptr, nullptr }
+        },
+        config::enabled
     },
     {
         config::graphics::texture_filter,
@@ -1005,6 +1020,8 @@ static void ParseGraphicsOptions(void) {
     auto resolution = LibRetro::FetchVariable(config::graphics::resolution_factor, "1");
     Settings::values.resolution_factor = std::stoi(resolution);
 
+    Settings::values.filter_mode = LibRetro::FetchVariable(config::graphics::filter_mode, config::enabled) == config::enabled;
+
     Settings::values.texture_filter =
         GetTextureFilter(LibRetro::FetchVariable(config::graphics::texture_filter, "none"));
 
@@ -1174,7 +1191,6 @@ void ParseCoreOptions(void) {
 #else
     Settings::values.use_gles = false;
 #endif
-    Settings::values.filter_mode = false;
 
     ParseCpuOptions();
     ParseSystemOptions();
