@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
-
+#include <numbers>
 #include "citra_libretro/core_settings.h"
 #include "citra_libretro/environment.h"
 #include "citra_libretro/input/mouse_tracker.h"
@@ -250,6 +250,17 @@ void MouseTracker::Update(int bufferWidth, int bufferHeight,
             float finalLength = speedup_enabled ? curvedLength * speedupratio : curvedLength;
             joystickScaledX = dirX * finalLength;
             joystickScaledY = dirY * finalLength;
+            // Add Angular Axis snapping
+            if (LibRetro::settings.axis_snapping){
+                float snappingAngleDeg = 10;
+                float toRad = std::numbers::pi/180.0f;
+                float joystickTangent = std::atan2(std::abs(joystickScaledY),std::abs(joystickScaledX));
+                if (joystickTangent < snappingAngleDeg*toRad){
+                    joystickScaledY = 0;
+                } else if (joystickTangent > (90-snappingAngleDeg)*toRad){
+                    joystickScaledX = 0;
+                }
+            }
         } else {
             joystickScaledX = 0.0f;
             joystickScaledY = 0.0f;

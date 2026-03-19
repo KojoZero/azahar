@@ -249,6 +249,7 @@ if (ENABLE_LIBRETRO)
         "use_libretro_save_path"
         "analog_function"
         "analog_deadzone"
+        "axis_snapping"
         "maxspeed"
         "responsecurve"
         "speedupratio"

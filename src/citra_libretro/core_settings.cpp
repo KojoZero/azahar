@@ -86,6 +86,7 @@ static constexpr const char* use_libretro_save_path =
 namespace input {
 static constexpr const char* analog_function = citra_setting(BaseKeys::analog_function);
 static constexpr const char* analog_deadzone = citra_setting(BaseKeys::analog_deadzone);
+static constexpr const char* axis_snapping = citra_setting(BaseKeys::axis_snapping);
 static constexpr const char* maxspeed = citra_setting(BaseKeys::maxspeed);
 static constexpr const char* responsecurve = citra_setting(BaseKeys::responsecurve);
 static constexpr const char* speedupratio = citra_setting(BaseKeys::speedupratio);
@@ -394,7 +395,7 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
             { config::disabled, "Disabled" },
             { nullptr, nullptr }
         },
-        config::enabled
+        config::disabled
     },
     {
         config::graphics::texture_filter,
@@ -518,7 +519,7 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
             { "1.25", "1.25x" },
             { "1.50", "1.50x" },
             { "1.75", "1.75x" },
-            { "2.00", "2.00x" },
+            { "2.00", "2.00x (Default)" },
             { "2.25", "2.25x" },
             { "2.50", "2.50x" },
             { "2.75", "2.75x" },
@@ -526,7 +527,7 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
             { "3.25", "3.25x" },
             { "3.50", "3.50x" },
             { "3.75", "3.75x" },
-            { "4.00", "4.00x (Default)" },
+            { "4.00", "4.00x" },
             { "4.25", "4.25x" },
             { "4.50", "4.50x" },
             { "4.75", "4.75x" },
@@ -537,7 +538,7 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
             { "6.00", "6.00x" },
             { nullptr, nullptr }
         },
-        "4.00"
+        "2.00"
     },
     {
         config::layout::small_screen_position,
@@ -621,7 +622,22 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
             { "20", "20%" }, { "25", "25%" }, { "30", "30%" }, { "35", "35%" },
             { nullptr, nullptr }
         },
-        "15"
+        "10"
+    },
+    {
+        config::input::axis_snapping,
+        "Axis Snapping",
+        "Axis Snapping",
+        "Enables Axis Snapping for analog pointer. "
+        "When analog stick is within 10° of either the x or y axis, it snaps to that axis. ",
+        nullptr,
+        config::category::input,
+        {
+            { config::enabled, "Enabled" },
+            { config::disabled, "Disabled" },
+            { nullptr, nullptr }
+        },
+        config::enabled
     },
     {
         config::input::maxspeed,
@@ -674,7 +690,7 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
             {"3.0", "300%"},
             {nullptr, nullptr},
         },
-        "2.0"
+        "2.5"
     },
     {
         config::input::enable_mouse_touchscreen,
@@ -716,7 +732,7 @@ static constexpr retro_core_option_v2_definition option_definitions[] = {
             { config::disabled, "Disabled" },
             { nullptr, nullptr }
         },
-        config::disabled
+        config::enabled
     },
     {
         config::input::enable_motion,
@@ -1147,6 +1163,9 @@ static void ParseInputOptions(void) {
     auto analog_deadzone = LibRetro::FetchVariable(config::input::analog_deadzone, "15");
     LibRetro::settings.analog_deadzone = static_cast<float>(std::stoi(analog_deadzone)) / 100.0f;
 
+    LibRetro::settings.axis_snapping =
+        LibRetro::FetchVariable(config::input::axis_snapping, config::enabled) ==
+        config::enabled;
     auto maxspeed = LibRetro::FetchVariable(config::input::maxspeed, "3");
     LibRetro::settings.maxspeed = std::stoi(maxspeed);
 

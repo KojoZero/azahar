@@ -20,6 +20,8 @@ struct CoreSettings {
 
     float analog_deadzone = 1.f;
 
+    bool axis_snapping;
+
     int maxspeed;
 
     float responsecurve;
