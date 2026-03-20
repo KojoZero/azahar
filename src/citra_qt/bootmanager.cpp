@@ -441,7 +441,6 @@ public:
         context->MakeCurrent();
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
         system.GPU().Renderer().TryPresent(100, is_secondary);
-        context->SwapBuffers();
         if (first_present){
             OpenGLCursorRenderer();
             first_present = !first_present;
@@ -454,6 +453,7 @@ public:
         float currProjectedY = currCursor->GetYPos() * (currBufferHeight / 240.0f);
         float currRenderRatio = currlayout->bottom_screen.GetHeight()/30.0f;
         OpenGLCursorRendererRender(currBufferWidth, currBufferHeight, currProjectedX, currProjectedY, currRenderRatio, currlayout);
+        context->SwapBuffers();
         glFinish();
     }
 
