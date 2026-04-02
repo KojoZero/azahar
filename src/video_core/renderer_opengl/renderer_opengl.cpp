@@ -556,13 +556,19 @@ void RendererOpenGL::DrawSingleScreen(const ScreenInfo& screen_info, float x, fl
 
     const u32 scale_factor = GetResolutionScaleFactor();
     const GLuint sampler = samplers[Settings::values.filter_mode.GetValue()].handle;
-    glUniform4f(uniform_i_resolution, static_cast<float>(screen_info.texture.width * scale_factor),
-                static_cast<float>(screen_info.texture.height * scale_factor),
-                1.0f / static_cast<float>(screen_info.texture.width * scale_factor),
-                1.0f / static_cast<float>(screen_info.texture.height * scale_factor));
-    glUniform4f(uniform_o_resolution, h, w, 1.0f / h, 1.0f / w);
+    glUniform4f(uniform_i_resolution,
+        static_cast<float>(screen_info.texture.height * scale_factor),
+        static_cast<float>(screen_info.texture.width * scale_factor),
+        1.0f / static_cast<float>(screen_info.texture.height * scale_factor),
+        1.0f / static_cast<float>(screen_info.texture.width * scale_factor));
+    glUniform4f(uniform_o_resolution, w, h, 1.0f / w, 1.0f / h);
     state.texture_units[0].texture_2d = screen_info.display_texture;
     state.texture_units[0].sampler = sampler;
+    printf("i_resolution: %f x %f\no_resolution: %f x %f\n",
+        static_cast<float>(screen_info.texture.height * scale_factor),
+        static_cast<float>(screen_info.texture.width * scale_factor),
+        w,
+        h);
     state.Apply();
 
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices.data());
