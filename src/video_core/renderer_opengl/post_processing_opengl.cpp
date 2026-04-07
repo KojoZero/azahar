@@ -53,6 +53,18 @@ uniform int layer;
 uniform sampler2D color_texture;
 uniform sampler2D color_texture_r;
 
+// Added for shader compatibility. This is used to acount for 3ds rotation.
+// Any time a shader uses frag_tex_coord, use rfrag_tex_coord instead.
+// Any time a shader uses texture(a,b) where b is derived from rfrag_tex_coord,
+// use rTexture(a,b) instead.
+
+#define rfrag_tex_coord vec2(1.0 - frag_tex_coord.y, 1.0 - frag_tex_coord.x)
+
+vec4 rTexture(sampler2D t, vec2 f){
+    return texture(t, vec2(1.0 - f.y, 1.0 - f.x));
+}
+
+
 // Interfacing functions
 float4 Sample()
 {
