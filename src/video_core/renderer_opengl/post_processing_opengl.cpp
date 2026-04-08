@@ -53,7 +53,7 @@ uniform int layer;
 uniform sampler2D color_texture;
 uniform sampler2D color_texture_r;
 
-// Added for shader compatibility. This is used to acount for 3ds rotation.
+// Added for shader compatibility. This is used to account for 3ds rotation.
 // Any time a shader uses frag_tex_coord, use rfrag_tex_coord instead.
 // Any time a shader uses texture(a,b) where b is derived from rfrag_tex_coord,
 // use rTexture(a,b) instead.
