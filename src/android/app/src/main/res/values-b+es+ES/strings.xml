@@ -337,8 +337,8 @@ Se esperan fallos gráficos temporales cuando ésta esté activado.</string>
     <string name="deterministic_async_operations_description">Hace que las operaciones asíncronas sean deterministas para la depuración. Habilitar esta opción puede causar bloqueos.</string>
     <string name="enable_rpc_server">Activar servidor RPC</string>
     <string name="enable_rpc_server_desc">Activa el servidor RPC en el puerto 45987. Esto permite leer/escribir de manera remota la memoria emulada.</string>
-    <string name="toggle_unique_data_console_type">Alternar los datos de consola únicos</string>
-    <string name="toggle_unique_data_console_type_desc">Alternar los datos de consola únicos (Old 3DS &#8596; New 3DS) para poder descargar el archivo del sistema opuesto desde la configuración del sistema.</string>
+    <string name="toggle_unique_data_console_type">Cambiar tipo de consola en los datos únicos de consola</string>
+    <string name="toggle_unique_data_console_type_desc">Permite alternar el tipo de consola (Old 3DS &#8596; New 3DS) para poder descargar el firmware del sistema opuesto desde la configuración del sistema.</string>
     <string name="shader_jit">Activar Sombreador JIT</string>
     <string name="shader_jit_description">Usar el motor JIT en lugar del intérprete para la emulación del sombreador de software.</string>
 
@@ -463,8 +463,8 @@ Se esperan fallos gráficos temporales cuando ésta esté activado.</string>
     <string name="bg_red">Rojo</string>
     <string name="bg_green">Verde</string>
     <string name="bg_blue">Azul</string>
-    <string name="second_screen_opacity">Opacidad personalizado de la segunda pantalla</string>
-    <string name="second_screen_opacity_description">La opacidad de la segunda pantalla de 3DS al usar el pantalla personalizado. Útil si la segunda pantalla ésta posicionada en la parte superior de la primera pantalla.</string>
+    <string name="second_screen_opacity">Opacidad personalizada de la segunda pantalla</string>
+    <string name="second_screen_opacity_description">La opacidad de la segunda pantalla de 3DS al usar la pantalla personalizada. Útil si la segunda pantalla ésta posicionada en la parte superior de la primera pantalla.</string>
     <string name="emulation_small_screen_position">Posición Pantalla Pequeña</string>
     <string name="small_screen_position_description">¿Dónde debería aparecer la pantalla pequeña en relación con la grande en Disposicion de Pantalla Grande?</string>
     <string name="small_screen_position_top_right">Arriba a la Derecha</string>
@@ -566,6 +566,10 @@ Se esperan fallos gráficos temporales cuando ésta esté activado.</string>
     <!-- Disk Shader Cache -->
     <string name="preparing_shaders">Preparando shaders</string>
     <string name="building_shaders">Construyendo%s</string>
+    <string name="delete_shader_cache">Eliminar caché de sombreadores </string>
+    <string name="delete_cache_select_backend">Selecciona la API gráfica para eliminar la caché de sombreadores</string>
+    <string name="deleting_shader_cache">Eliminando la caché de sombreadores, por favor espere…</string>
+    <string name="shader_cache_deleted">Caché de sombreadores eliminada</string>
 
     <!-- About Game Dialog -->
     <string name="play">Jugar</string>

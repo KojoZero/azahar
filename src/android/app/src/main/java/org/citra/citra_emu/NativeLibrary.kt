@@ -258,6 +258,9 @@ object NativeLibrary {
 
     external fun nativeFileExists(path: String): Boolean
 
+    external fun deleteOpenGLShaderCache(titleId: Long)
+    external fun deleteVulkanShaderCache(titleId: Long)
+
     private var coreErrorAlertResult = false
     private val coreErrorAlertLock = Object()
 
@@ -504,8 +507,9 @@ object NativeLibrary {
             const val ErrorSystemFiles = 8
             const val ErrorSavestate = 9
             const val ErrorArticDisconnected = 10
-            const val ShutdownRequested = 11
-            const val ErrorUnknown = 12
+            const val ErrorN3DSApplication = 11
+            const val ShutdownRequested = 12
+            const val ErrorUnknown = 13
 
             fun newInstance(resultCode: Int): EmulationErrorDialogFragment {
                 val args = Bundle()
@@ -729,6 +733,10 @@ object NativeLibrary {
             return uriString
         }
 
+        if (uri.scheme == "file") {
+            return uri.path!!
+        }
+
         val pathSegment = uri.lastPathSegment ?: return ""
         val virtualPath = pathSegment.substringAfter(":")
 
@@ -737,7 +745,7 @@ object NativeLibrary {
             return primaryStoragePath + dirSep + virtualPath
         } else { // User directory probably located on a removable storage device
             val storageIdString = pathSegment.substringBefore(":")
-            val removablePath = RemovableStorageHelper.getRemovableStoragePath(storageIdString)
+            val removablePath = RemovableStorageHelper.getRemovableStoragePath(CitraApplication.appContext, storageIdString)
 
             if (removablePath == null) {
                 android.util.Log.e("NativeLibrary",
