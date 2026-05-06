@@ -338,11 +338,27 @@ void RendererOpenGL::LoadFBToScreenInfo(const Pica::FramebufferConfig& framebuff
         state.Apply();
     }
 }
+std::vector<unsigned char> flipVertically(const unsigned char* data, int width, int height, int channels)
+{
+    int rowSize = width * channels;
+    std::vector<unsigned char> flipped(width * height * channels);
+
+    for (int y = 0; y < height; y++)
+    {
+        const unsigned char* src = data + (height - 1 - y) * rowSize;
+        unsigned char* dst       = flipped.data() + y * rowSize;
+        memcpy(dst, src, rowSize);
+    }
+
+    return flipped;
+}
 
 void RendererOpenGL::AllocateSMAATextures(){
     //Load AreaTex and SearchTex  to OGLTexture Objects 
     areatex.Create();
     searchtex.Create();
+    std::vector<unsigned char> areaTexBytes_Flipped = flipVertically(areaTexBytes, AREATEX_WIDTH, AREATEX_HEIGHT, 2);
+    std::vector<unsigned char> searchTexBytes_Flipped = flipVertically(searchTexBytes, SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT, 1);
     GLuint old_tex = OpenGLState::GetCurState().texture_units[0].texture_2d;
     
     glBindTexture(GL_TEXTURE_2D, areatex.handle);
@@ -350,14 +366,14 @@ void RendererOpenGL::AllocateSMAATextures(){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RG8, AREATEX_WIDTH, AREATEX_HEIGHT, 0, GL_RG, GL_UNSIGNED_BYTE, areaTexBytes);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RG8, AREATEX_WIDTH, AREATEX_HEIGHT, 0, GL_RG, GL_UNSIGNED_BYTE, areaTexBytes_Flipped.data());
 
     glBindTexture(GL_TEXTURE_2D, searchtex.handle);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT, 0, GL_RED, GL_UNSIGNED_BYTE, searchTexBytes);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT, 0, GL_RED, GL_UNSIGNED_BYTE, searchTexBytes_Flipped.data());
 
     glBindTexture(GL_TEXTURE_2D, old_tex);  
 }
@@ -859,6 +875,7 @@ void RendererOpenGL::DrawSingleScreen(const ScreenInfo& screen_info, float scree
         state.Apply();
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(pass_through_vertices), pass_through_vertices.data());
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
     } else {
         state.draw.read_framebuffer = textureFBO.handle;
         state.draw.draw_framebuffer = textureFBO.handle;
@@ -953,6 +970,8 @@ void RendererOpenGL::DrawSingleScreen(const ScreenInfo& screen_info, float scree
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(output_vertices), output_vertices.data());
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
+
+
     state.texture_units[0].texture_2d = 0;
     state.texture_units[0].sampler = 0;
     state.Apply();
