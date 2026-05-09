@@ -105,6 +105,10 @@
  *     C++ headers, and also as regular DDS files. They'll be needed for the
  *     'SMAABlendingWeightCalculation' pass.
  *
+ *     !!!!!!!!!!!!!!!!!!!!!!!!!!!!IMPORTANT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ *     MAKE SURE TO VERTICALLY FLIP THE AREATEX AND SEARCHTEX HEADERS IF USING OPENGL
+ *
+ *
  *     If you use the C++ headers, be sure to load them in the format specified
  *     inside of them.
  *
